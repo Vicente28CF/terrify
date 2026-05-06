@@ -17,6 +17,18 @@ const navItems = [
     ),
   },
   {
+    href: "/mensajes",
+    label: "Mensajes",
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+      />
+    ),
+  },
+  {
     href: "/publicar",
     label: "Publicar",
     icon: (
@@ -49,7 +61,7 @@ export function MobileBottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-50 md:hidden">
       {/* Fondo sólido que nunca desaparece */}
       <div className="bg-white/95 backdrop-blur-md border-t border-line/40 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <div className="mx-auto grid max-w-sm grid-cols-3 gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||

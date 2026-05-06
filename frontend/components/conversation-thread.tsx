@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { fetchMessages, sendMessage, markConversationAsRead } from "@/lib/api";
 import type { Message } from "@/lib/types";
 
-export function ConversationThread({ contactId }: { contactId: string }) {
+export function ConversationThread({ contactId, showBackButton = false }: { contactId: string; showBackButton?: boolean }) {
   const { auth } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -26,12 +27,17 @@ export function ConversationThread({ contactId }: { contactId: string }) {
   // Cargar mensajes al montar
   useEffect(() => {
     if (!auth) return;
+    console.log("Fetching messages for contact:", contactId);
     fetchMessages(contactId, auth)
       .then((msgs) => {
+        console.log("Messages loaded:", msgs.length);
         const unique = Array.from(new Map(msgs.map((m) => [m.id, m])).values());
         setMessages(unique);
       })
-      .catch(() => setError("No se pudieron cargar los mensajes."));
+      .catch((err) => {
+        console.error("Error fetching messages:", err);
+        setError("No se pudieron cargar los mensajes.");
+      });
   }, [contactId, auth]);
 
   // Polling cada 5 segundos — merge sin duplicados
@@ -54,10 +60,14 @@ export function ConversationThread({ contactId }: { contactId: string }) {
     return () => clearInterval(interval);
   }, [contactId, auth]);
 
-  // Scroll al último mensaje
+  // Scroll al último mensaje solo cuando se envía nuevo mensaje
+  const [lastMessageCount, setLastMessageCount] = useState(0);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (messages.length > lastMessageCount && lastMessageCount > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    setLastMessageCount(messages.length);
+  }, [messages, lastMessageCount]);
 
   async function handleSend() {
     if (!auth || !input.trim()) return;
@@ -76,6 +86,18 @@ export function ConversationThread({ contactId }: { contactId: string }) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header con botón volver */}
+      {showBackButton && (
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-line/40 bg-white lg:hidden">
+          <Link href="/mensajes" className="p-1 -ml-1">
+            <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+            </svg>
+          </Link>
+          <p className="font-semibold text-ink text-sm">Conversación</p>
+        </div>
+      )}
+
       {/* Aviso de seguridad */}
       <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
         <p className="text-xs text-amber-700 font-medium text-center">

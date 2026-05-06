@@ -103,13 +103,12 @@ export function SiteHeader() {
                 </Link>
               )}
               {isAuthenticated && (
-                <Link href="/mensajes" title="Mensajes" className={`relative flex items-center gap-1.5 rounded-full px-4 py-2 transition hover:bg-sand hover:text-ink active:scale-95 ${pathname === "/mensajes" || pathname.startsWith("/mensajes/") ? "bg-sand text-ink" : ""}`}>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <Link href="/mensajes" title="Mensajes" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-line/60 bg-white transition hover:bg-sand">
+                  <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                   </svg>
-                  Mensajes
                   {unreadCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-coral text-[10px] font-bold text-white shadow-sm">
+                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-coral text-[10px] font-bold text-white flex items-center justify-center">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}

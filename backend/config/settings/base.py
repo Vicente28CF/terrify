@@ -112,10 +112,14 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
-        "user": "500/hour",
-        "login": "5/minute",       # rate limit específico para login
-        "contact": "10/hour",      # rate limit para formulario de contacto
+        "anon": "1000/hour",
+        "user": "1000/hour",
+        "login": "20/minute",
+        "register": "20/minute",
+        "contact": "100/hour",
+        "message": "100/minute",
+        "refresh": "50/minute",
+        "terreno_mine": "200/minute",
     },
 }
 
@@ -219,9 +223,9 @@ LOGGING = {
 
 # ─── Content Security Policy ─────────────────────────────────────────────────
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
-CSP_SCRIPT_SRC = ("'self'", "https://accounts.google.com")
-CSP_CONNECT_SRC = ("'self'", "https://accounts.google.com", "https://oauth2.googleapis.com")
+CSP_STYLE_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'", "https://accounts.google.com", "https://apis.google.com")
+CSP_CONNECT_SRC = ("'self'", "https://accounts.google.com", "https://oauth2.googleapis.com", "https://www.googleapis.com")
 CSP_FRAME_SRC = ("'self'", "https://accounts.google.com")
 CSP_IMG_SRC = ("'self'", "data:", "res.cloudinary.com")
 CSP_FONT_SRC = ("'self'",)
