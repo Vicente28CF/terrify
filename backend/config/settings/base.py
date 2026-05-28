@@ -112,14 +112,14 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "1000/hour",
-        "user": "1000/hour",
-        "login": "20/minute",
-        "register": "20/minute",
-        "contact": "100/hour",
-        "message": "100/minute",
-        "refresh": "50/minute",
-        "terreno_mine": "200/minute",
+        "anon": "50/hour",
+        "user": "200/hour",
+        "login": "5/minute",
+        "register": "3/minute",
+        "contact": "10/hour",
+        "message": "10/minute",
+        "refresh": "10/minute",
+        "terreno_mine": "50/minute",
     },
 }
 
