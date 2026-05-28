@@ -168,8 +168,8 @@ cloudinary.config(
     secure=True,
 )
 
-LOTEX_MAX_TERRAIN_IMAGES = config("LOTEX_MAX_TERRAIN_IMAGES", default=10, cast=int)
-LOTEX_MAX_IMAGE_FILE_SIZE = config("LOTEX_MAX_IMAGE_FILE_SIZE", default=5 * 1024 * 1024, cast=int)
+TERRIFY_MAX_TERRAIN_IMAGES = config("TERRIFY_MAX_TERRAIN_IMAGES", default=10, cast=int)
+TERRIFY_MAX_IMAGE_FILE_SIZE = config("TERRIFY_MAX_IMAGE_FILE_SIZE", default=5 * 1024 * 1024, cast=int)
 
 # ─── Email con Resend ─────────────────────────────────────────────────────────
 RESEND_API_KEY = config("RESEND_API_KEY", default="")

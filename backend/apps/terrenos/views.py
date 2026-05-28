@@ -13,6 +13,8 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from core.permissions import IsOwnerOrReadOnly
+from core.throttling import TerrenoMineRateThrottle
+from core.cache import get_cached_list, set_cached_list, invalidate_terreno_cache, invalidate_terreno_detail
 
 from .models import Terreno, TerrenoImage
 from .serializers import (
@@ -82,6 +84,11 @@ class TerrenoViewSet(viewsets.ModelViewSet):
             permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
         return [permission() for permission in permission_classes]
 
+    def get_throttles(self):
+        if self.action == "mine":
+            return [TerrenoMineRateThrottle()]
+        return super().get_throttles()
+
     def get_serializer_class(self):
         if self.action in ("list", "mine"):
             return TerrenoListSerializer
@@ -96,10 +103,35 @@ class TerrenoViewSet(viewsets.ModelViewSet):
                 return TerrenoImageDeleteSerializer
         return TerrenoWriteSerializer
 
+    def list(self, request, *args, **kwargs):
+        cache_params = {
+            key: request.query_params.get(key)
+            for key in ["municipio", "estado", "min_price", "max_price", "min_area", "max_area", "ordering", "search", "is_featured"]
+            if request.query_params.get(key)
+        }
+        cache_params["page"] = request.query_params.get("page", "1")
+
+        cached_data = get_cached_list("terrenos", cache_params, timeout=60)
+        if cached_data is not None:
+            return Response(cached_data)
+
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response = self.get_paginated_response(serializer.data)
+            set_cached_list("terrenos", cache_params, response.data, timeout=60)
+            return response
+        serializer = self.get_serializer(queryset, many=True)
+        response = Response(serializer.data)
+        set_cached_list("terrenos", cache_params, response.data, timeout=60)
+        return response
+
     def perform_create(self, serializer):
         if not self.request.user.can_publish:
             raise PermissionDenied("Has alcanzado tu limite de publicaciones activas.")
         serializer.save(user=self.request.user)
+        invalidate_terreno_cache()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -117,7 +149,32 @@ class TerrenoViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         instance.refresh_from_db()
+        invalidate_terreno_cache()
+        invalidate_terreno_detail(instance.slug)
         return Response(TerrenoDetailSerializer(instance, context=self.get_serializer_context()).data)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        slug = instance.slug
+        self.perform_destroy(instance)
+        invalidate_terreno_cache()
+        invalidate_terreno_detail(slug)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def set_status(self, request, slug=None):
+        terreno = self.get_object()
+        new_status = request.data.get("status")
+        if new_status not in [Terreno.Status.ACTIVE, Terreno.Status.SOLD, Terreno.Status.PAUSED]:
+            return Response(
+                {"status": "Status inválido. Usa: active, sold, paused"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        terreno.status = new_status
+        terreno.save(update_fields=["status"])
+        invalidate_terreno_cache()
+        invalidate_terreno_detail(terreno.slug)
+        return Response(TerrenoDetailSerializer(terreno, context=self.get_serializer_context()).data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -155,15 +212,14 @@ class TerrenoViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated], url_path="favorites")
     def favorites(self, request):
         from .models import Favorite
-        favorites_qs = Favorite.objects.filter(user=request.user).select_related("terreno")
-        
-        # Obtenemos la lista de los IDs de los terrenos favoritos en orden
-        favorite_terreno_ids = list(favorites_qs.values_list('terreno_id', flat=True))
-        
-        # Generamos el queryset base pero filtrando en los permitidos
-        queryset = self.get_queryset().filter(id__in=favorite_terreno_ids)
-        
-        # Para forzar el orden de 'favorites_qs' podríamos hacerlo, pero el queryset default está bien
+        from django.db.models import Case, When
+
+        favorite_ids = list(Favorite.objects.filter(user=request.user).values_list('terreno_id', flat=True))
+
+        preserved_order = Case(*[When(id=id, then=pos) for pos, id in enumerate(favorite_ids)])
+
+        queryset = self.get_queryset().filter(id__in=favorite_ids).order_by(preserved_order)
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = TerrenoListSerializer(page, many=True, context=self.get_serializer_context())
@@ -234,9 +290,9 @@ class TerrenoViewSet(viewsets.ModelViewSet):
 
         existing_count = terreno.images.count()
         total_count = existing_count + len(files)
-        if total_count > settings.LOTEX_MAX_TERRAIN_IMAGES:
+        if total_count > settings.TERRIFY_MAX_TERRAIN_IMAGES:
             raise ValidationError(
-                {"images": f"No puedes registrar mas de {settings.LOTEX_MAX_TERRAIN_IMAGES} imagenes por terreno."}
+                {"images": f"No puedes registrar mas de {settings.TERRIFY_MAX_TERRAIN_IMAGES} imagenes por terreno."}
             )
 
         next_order = existing_count
@@ -270,9 +326,9 @@ class TerrenoViewSet(viewsets.ModelViewSet):
         )
 
     def _validate_image_file(self, file):
-        if file.size > settings.LOTEX_MAX_IMAGE_FILE_SIZE:
+        if file.size > settings.TERRIFY_MAX_IMAGE_FILE_SIZE:
             raise ValidationError(
-                {"images": f"Cada imagen debe pesar menos de {settings.LOTEX_MAX_IMAGE_FILE_SIZE // (1024 * 1024)} MB."}
+                {"images": f"Cada imagen debe pesar menos de {settings.TERRIFY_MAX_IMAGE_FILE_SIZE // (1024 * 1024)} MB."}
             )
 
         header = file.read(512)
