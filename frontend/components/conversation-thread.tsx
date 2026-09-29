@@ -27,15 +27,12 @@ export function ConversationThread({ contactId, showBackButton = false }: { cont
   // Cargar mensajes al montar
   useEffect(() => {
     if (!auth) return;
-    console.log("Fetching messages for contact:", contactId);
     fetchMessages(contactId, auth)
       .then((msgs) => {
-        console.log("Messages loaded:", msgs.length);
         const unique = Array.from(new Map(msgs.map((m) => [m.id, m])).values());
         setMessages(unique);
       })
-      .catch((err) => {
-        console.error("Error fetching messages:", err);
+      .catch(() => {
         setError("No se pudieron cargar los mensajes.");
       });
   }, [contactId, auth]);
@@ -61,13 +58,13 @@ export function ConversationThread({ contactId, showBackButton = false }: { cont
   }, [contactId, auth]);
 
   // Scroll al último mensaje solo cuando se envía nuevo mensaje
-  const [lastMessageCount, setLastMessageCount] = useState(0);
+  const lastMessageCountRef = useRef(0);
   useEffect(() => {
-    if (messages.length > lastMessageCount && lastMessageCount > 0) {
+    if (messages.length > lastMessageCountRef.current && lastMessageCountRef.current > 0) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-    setLastMessageCount(messages.length);
-  }, [messages, lastMessageCount]);
+    lastMessageCountRef.current = messages.length;
+  }, [messages]);
 
   async function handleSend() {
     if (!auth || !input.trim()) return;
@@ -119,7 +116,7 @@ export function ConversationThread({ contactId, showBackButton = false }: { cont
           >
             <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${
               msg.isMine
-                ? "bg-coral text-white rounded-br-sm"
+                ? "bg-cta text-text rounded-br-sm"
                 : "bg-white border border-line/60 text-ink rounded-bl-sm"
             }`}>
               {!msg.isMine && (
@@ -166,13 +163,13 @@ export function ConversationThread({ contactId, showBackButton = false }: { cont
             placeholder="Escribe tu mensaje..."
             rows={1}
             maxLength={1000}
-            className="flex-1 resize-none rounded-2xl border border-line/60 bg-sand px-4 py-3 text-sm text-ink placeholder:text-stone/50 outline-none focus:border-coral/50 max-h-32"
+            className="flex-1 resize-none rounded-2xl border border-line/60 bg-sand px-4 py-3 text-sm text-ink placeholder:text-stone/50 outline-none focus:border-cta/50 max-h-32"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={isSending || !input.trim()}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-coral text-white shadow-md transition hover:bg-[#e92a5b] disabled:opacity-40"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-cta text-white shadow-md transition hover:bg-cta-dark disabled:opacity-40"
           >
             {isSending ? (
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">

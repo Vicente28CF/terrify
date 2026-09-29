@@ -1,10 +1,11 @@
-import imghdr
 import logging
 
+from django.core.cache import cache
 from django.db import transaction
 from django.conf import settings
-from django.db.models import F, Prefetch, Q
-from django_filters.rest_framework import DjangoFilterBackend, FilterSet, NumberFilter
+from django.db.models import Exists, F, OuterRef, Prefetch, Q, Subquery, CharField, Value
+from django.db.models.functions import Lower
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -16,6 +17,7 @@ from core.permissions import IsOwnerOrReadOnly
 from core.throttling import TerrenoMineRateThrottle
 from core.cache import get_cached_list, set_cached_list, invalidate_terreno_cache, invalidate_terreno_detail
 
+from .filters import TerrenoFilterSet
 from .models import Terreno, TerrenoImage
 from .serializers import (
     TerrenoDetailSerializer,
@@ -35,23 +37,12 @@ from .services import (
 logger = logging.getLogger(__name__)
 
 
-class TerrenoFilterSet(FilterSet):
-    min_price = NumberFilter(field_name="price", lookup_expr="gte")
-    max_price = NumberFilter(field_name="price", lookup_expr="lte")
-    min_area = NumberFilter(field_name="area_m2", lookup_expr="gte")
-    max_area = NumberFilter(field_name="area_m2", lookup_expr="lte")
-
-    class Meta:
-        model = Terreno
-        fields = ("municipio", "estado", "is_featured", "min_price", "max_price", "min_area", "max_area")
-
-
 class TerrenoViewSet(viewsets.ModelViewSet):
     lookup_field = "slug"
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter)
     filterset_class = TerrenoFilterSet
     search_fields = ("title", "description", "municipio", "estado")
-    ordering_fields = ("created_at", "price", "area_m2", "views_count")
+    ordering_fields = ("created_at", "price", "area_m2", "views_count", "price_per_m2")
     ordering = ("-is_featured", "-created_at")
 
     def get_queryset(self):
@@ -60,6 +51,19 @@ class TerrenoViewSet(viewsets.ModelViewSet):
             Terreno.objects.select_related("user")
             .prefetch_related(Prefetch("images", queryset=image_queryset))
         )
+
+        if self._is_ordering_by_price_per_m2():
+            queryset = queryset.annotate(price_per_m2=F("price") / F("area_m2"))
+
+        if self.action in ("list", "mine", "favorites") and self.request.user.is_authenticated:
+            from .models import Favorite
+            user_favorites = Favorite.objects.filter(
+                user=self.request.user, terreno=OuterRef("pk")
+            )
+            queryset = queryset.annotate(is_favorited=Exists(user_favorites))
+        elif self.action in ("list", "mine", "favorites"):
+            from django.db.models import Value
+            queryset = queryset.annotate(is_favorited=Value(False))
 
         if self.action == "mine":
             return queryset.filter(user=self.request.user)
@@ -74,6 +78,14 @@ class TerrenoViewSet(viewsets.ModelViewSet):
             return queryset.filter(status=Terreno.Status.ACTIVE)
 
         return queryset
+
+    def _is_ordering_by_price_per_m2(self) -> bool:
+        ordering = self.request.query_params.get("ordering", "")
+        return any(
+            field.strip().lstrip("-") == "price_per_m2"
+            for field in ordering.split(",")
+            if field.strip()
+        )
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
@@ -106,7 +118,13 @@ class TerrenoViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         cache_params = {
             key: request.query_params.get(key)
-            for key in ["municipio", "estado", "min_price", "max_price", "min_area", "max_area", "ordering", "search", "is_featured"]
+            for key in [
+                "municipio", "estado", "min_price", "max_price",
+                "min_area", "max_area", "area_unit", "ordering", "search", "is_featured",
+                "terrain_type", "servicio", "accepts_financing",
+                "accesible_para_empezar", "land_use", "property_type",
+                "has_water", "has_electricity", "has_drainage", "has_paved_road",
+            ]
             if request.query_params.get(key)
         }
         cache_params["page"] = request.query_params.get("page", "1")
@@ -161,9 +179,10 @@ class TerrenoViewSet(viewsets.ModelViewSet):
         invalidate_terreno_detail(slug)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated, IsOwnerOrReadOnly])
     def set_status(self, request, slug=None):
         terreno = self.get_object()
+        self.check_object_permissions(request, terreno)
         new_status = request.data.get("status")
         if new_status not in [Terreno.Status.ACTIVE, Terreno.Status.SOLD, Terreno.Status.PAUSED]:
             return Response(
@@ -179,8 +198,10 @@ class TerrenoViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if not request.user.is_authenticated or instance.user_id != request.user.id:
-            Terreno.objects.filter(pk=instance.pk).update(views_count=F("views_count") + 1)
-            instance.refresh_from_db(fields=("views_count",))
+            cache_key = f"terreno_views:{instance.pk}"
+            cache.add(cache_key, 0, timeout=None)
+            pending_views = cache.incr(cache_key)
+            instance.views_count += pending_views
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
@@ -333,9 +354,21 @@ class TerrenoViewSet(viewsets.ModelViewSet):
 
         header = file.read(512)
         file.seek(0)
-        image_kind = imghdr.what(None, header)
+        image_kind = self._detect_image_type(header)
         if image_kind not in {"jpeg", "png", "webp"}:
             raise ValidationError({"images": "Formato de imagen no permitido. Usa JPG, PNG o WEBP."})
+
+    @staticmethod
+    def _detect_image_type(header: bytes) -> str | None:
+        if len(header) < 4:
+            return None
+        if header[:2] == b"\xff\xd8":
+            return "jpeg"
+        if header[:4] == b"\x89PNG\r\n\x1a\n":
+            return "png"
+        if header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+            return "webp"
+        return None
 
     @transaction.atomic
     def _delete_terreno_image(self, terreno, image_id):

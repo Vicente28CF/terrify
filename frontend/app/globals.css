@@ -5,6 +5,21 @@
 @layer base {
   :root {
     color-scheme: light;
+    --font-dm-sans: "Segoe UI", Arial, sans-serif;
+    --font-sora: "Segoe UI", Arial, sans-serif;
+    /* Paleta de marca Terrify */
+    --color-primary: #7A3B24;
+    --color-primary-dark: #5C2C1B;
+    --color-secondary: #3F5940;
+    --color-cta: #D19A3D;
+    --color-cta-dark: #A87427;
+    --color-success: #4A7C4E;
+    --color-warning: #C08A3E;
+    --color-danger: #A83E2E;
+    --color-background: #F3EEE4;
+    --color-background-alt: #E8E1D3;
+    --color-text: #2B241E;
+    --color-text-muted: #6B6355;
   }
 
   html {
@@ -12,10 +27,10 @@
   }
 
   body {
-    @apply bg-sand text-ink antialiased;
+    @apply bg-background text-text antialiased;
     background-image:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.98), rgba(251, 247, 242, 0.78) 34%, rgba(242, 234, 226, 0.64) 68%, rgba(251, 247, 242, 0.95) 100%),
-      linear-gradient(180deg, #fffdf9 0%, #fbf7f2 52%, #f6efe7 100%);
+      radial-gradient(circle at top left, rgba(255, 255, 255, 0.98), rgba(243, 238, 228, 0.78) 34%, rgba(232, 225, 211, 0.64) 68%, rgba(243, 238, 228, 0.95) 100%),
+      linear-gradient(180deg, #fffdf9 0%, #F3EEE4 52%, #E8E1D3 100%);
     min-height: 100vh;
   }
 
@@ -24,12 +39,12 @@
   }
 
   :focus-visible {
-    outline: 2px solid rgba(255, 56, 92, 0.45);
+    outline: 2px solid rgba(209, 154, 61, 0.45);
     outline-offset: 3px;
   }
 
   ::selection {
-    background: rgba(255, 56, 92, 0.18);
+    background: rgba(209, 154, 61, 0.18);
   }
 
   ::-webkit-scrollbar {

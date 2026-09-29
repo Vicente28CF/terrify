@@ -45,6 +45,11 @@ class ContactRequest(models.Model):
         verbose_name        = "Solicitud de contacto"
         verbose_name_plural = "Solicitudes de contacto"
         ordering            = ["-created_at"]
+        indexes = [
+            models.Index(fields=["buyer"]),
+            models.Index(fields=["status"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return f"{self.buyer_name} interesado en {self.terreno.title}"
@@ -76,6 +81,10 @@ class Message(models.Model):
     class Meta:
         db_table = "contact_messages"
         ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["contact_request"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return f"Mensaje de {self.sender_role} en contacto {self.contact_request_id}"

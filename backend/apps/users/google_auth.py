@@ -4,6 +4,7 @@ from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from rest_framework import permissions, status
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -22,6 +23,7 @@ def get_tokens_for_user(user: User):
 class GoogleAuthView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         if not settings.GOOGLE_CLIENT_ID:

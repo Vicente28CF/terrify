@@ -42,7 +42,7 @@ async function HomeContent() {
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="font-display text-[2.2rem] font-bold leading-[1.1] tracking-[-0.03em] text-ink sm:text-[3rem] lg:text-[3.5rem]">
             Encuentra tu terreno ideal<br />
-            <span className="text-coral">en Jalisco</span>
+            <span className="text-cta">en Jalisco</span>
           </h1>
           
           <p className="mx-auto mt-4 max-w-xl text-base font-medium leading-relaxed text-stone sm:text-lg">

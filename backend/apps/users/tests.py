@@ -4,10 +4,22 @@ from rest_framework.test import APITestCase
 from unittest.mock import patch
 
 from .models import User
+from .views import RegisterView, LoginView
+from .google_auth import GoogleAuthView
 
 
 class AuthApiTests(APITestCase):
-    def test_register_returns_tokens_and_user(self):
+    def setUp(self):
+        self._patchers = []
+        for view_cls in (RegisterView, LoginView, GoogleAuthView):
+            p = patch.object(view_cls, "throttle_classes", [])
+            p.start()
+            self._patchers.append(p)
+
+    def tearDown(self):
+        for p in self._patchers:
+            p.stop()
+    def test_register_returns_message_and_waits_verification(self):
         response = self.client.post(
             reverse("auth-register"),
             {
@@ -20,8 +32,8 @@ class AuthApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn("tokens", response.data)
-        self.assertIn("user", response.data)
+        self.assertIn("message", response.data)
+        self.assertIn("email", response.data)
         self.assertTrue(User.objects.filter(email="nuevo@test.com").exists())
 
     def test_login_returns_tokens(self):

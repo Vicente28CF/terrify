@@ -20,16 +20,22 @@ export function ConversationsList({ activeId, compact = false }: ConversationsLi
 
   useEffect(() => {
     if (!auth) return;
-    
-    setIsLoading(true);
-    setError(null);
-    fetchMyConversations(auth)
-      .then((data) => setConversations(data))
-      .catch((err) => {
-        console.error("Error fetching conversations:", err);
+    const currentAuth = auth;
+
+    async function load() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await fetchMyConversations(currentAuth);
+        setConversations(data);
+      } catch (err) {
         setError(err instanceof Error ? err.message : "Error al cargar conversaciones");
-      })
-      .finally(() => setIsLoading(false));
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    void load();
   }, [auth]);
 
   const currentUserEmail = session?.user.email?.toLowerCase();
@@ -61,7 +67,7 @@ export function ConversationsList({ activeId, compact = false }: ConversationsLi
         <p className="text-sm text-red-600 font-medium">{error}</p>
         <button 
           onClick={() => window.location.reload()} 
-          className="mt-3 text-xs text-coral hover:underline"
+          className="mt-3 text-xs text-cta hover:underline"
         >
           Reintentar
         </button>
@@ -150,7 +156,7 @@ function ConversationItem({
         isActive ? "bg-sand border-l-2 border-l-coral" : ""
       }`}
     >
-      <div className="flex-shrink-0 h-11 w-11 rounded-full bg-coral/10 flex items-center justify-center font-bold text-coral">
+      <div className="flex-shrink-0 h-11 w-11 rounded-full bg-cta/10 flex items-center justify-center font-bold text-cta">
         {otherPersonName?.[0]?.toUpperCase() ?? "?"}
       </div>
 
@@ -176,7 +182,7 @@ function ConversationItem({
       </div>
 
       {hasUnread && (
-        <div className="flex-shrink-0 h-2.5 w-2.5 rounded-full bg-coral mt-1" />
+        <div className="flex-shrink-0 h-2.5 w-2.5 rounded-full bg-cta mt-1" />
       )}
     </Link>
   );

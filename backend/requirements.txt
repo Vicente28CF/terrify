@@ -22,8 +22,9 @@ requests==2.31.0
 # ─── Caché con Redis ─────────────────────────────────────────────
 django-redis==5.4.0
 
-# ─── Rate limiting ───────────────────────────────────────────────
-django-ratelimit==4.1.0
+# ─── Celery (tareas asíncronas) ──────────────────────────────────
+celery==5.4.0
+django-celery-beat==2.7.0
 
 # ─── Imágenes con Cloudinary ─────────────────────────────────────
 cloudinary==1.40.0
@@ -34,6 +35,9 @@ resend==2.3.0
 
 # ─── Seguridad ───────────────────────────────────────────────────
 django-csp==3.8
+
+# ─── Servir archivos estáticos ──────────────────────────────────
+whitenoise==6.6.0
 
 # ─── Escaneo de vulnerabilidades (CI) ────────────────────────────
 pip-audit==2.7.3

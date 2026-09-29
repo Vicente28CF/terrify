@@ -166,10 +166,10 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
               autoComplete="name"
               aria-invalid={Boolean(errors.fullName)}
               aria-describedby={errors.fullName ? "fullName-error" : undefined}
-              className={`w-full rounded-2xl border bg-sand px-4 py-3.5 text-sm font-medium text-ink placeholder:text-stone/40 outline-none transition focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,56,92,0.08)] ${
+              className={`w-full rounded-2xl border bg-sand px-4 py-3.5 text-sm font-medium text-ink placeholder:text-stone/40 outline-none transition focus:bg-white focus:shadow-[0_0_0_3px_rgba(209,154,61,0.08)] ${
                 errors.fullName
                   ? "border-red-400 focus:border-red-400"
-                  : "border-line focus:border-coral/50"
+                  : "border-line focus:border-cta/50"
               }`}
             />
             {errors.fullName ? (
@@ -196,11 +196,11 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
             autoComplete="email"
             aria-invalid={Boolean(errors.email)}
             aria-describedby={errors.email ? "email-error" : undefined}
-            className={`w-full rounded-2xl border bg-sand px-4 py-3.5 text-sm font-medium text-ink placeholder:text-stone/40 outline-none transition focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,56,92,0.08)] ${
-              errors.email
-                ? "border-red-400 focus:border-red-400"
-                : "border-line focus:border-coral/50"
-            }`}
+              className={`w-full rounded-2xl border bg-sand px-4 py-3.5 text-sm font-medium text-ink placeholder:text-stone/40 outline-none transition focus:bg-white focus:shadow-[0_0_0_3px_rgba(209,154,61,0.08)] ${
+                errors.email
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-line focus:border-cta/50"
+              }`}
           />
           {errors.email ? (
             <p id="email-error" className="mt-1 text-xs text-red-500">
@@ -227,11 +227,11 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             aria-invalid={Boolean(errors.password)}
             aria-describedby={errors.password ? "password-error" : undefined}
-            className={`w-full rounded-2xl border bg-sand px-4 py-3.5 text-sm font-medium text-ink placeholder:text-stone/40 outline-none transition focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,56,92,0.08)] ${
-              errors.password
-                ? "border-red-400 focus:border-red-400"
-                : "border-line focus:border-coral/50"
-            }`}
+              className={`w-full rounded-2xl border bg-sand px-4 py-3.5 text-sm font-medium text-ink placeholder:text-stone/40 outline-none transition focus:bg-white focus:shadow-[0_0_0_3px_rgba(209,154,61,0.08)] ${
+                errors.password
+                  ? "border-red-400 focus:border-red-400"
+                  : "border-line focus:border-cta/50"
+              }`}
           />
           {errors.password ? (
             <p id="password-error" className="mt-1 text-xs text-red-500">
@@ -249,7 +249,7 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
         <button
           type="submit"
           disabled={status.type === "loading"}
-          className="w-full rounded-2xl bg-coral py-4 text-sm font-bold text-white shadow-[0_4px_14px_rgba(255,56,92,0.3)] transition hover:-translate-y-px hover:bg-[#e92a5b] hover:shadow-[0_6px_20px_rgba(255,56,92,0.4)] active:scale-[0.98] disabled:opacity-60 disabled:hover:translate-y-0"
+          className="w-full rounded-2xl bg-cta py-4 text-sm font-bold text-text shadow-[0_4px_14px_rgba(209,154,61,0.3)] transition hover:-translate-y-px hover:bg-cta-dark hover:shadow-[0_6px_20px_rgba(209,154,61,0.4)] active:scale-[0.98] disabled:opacity-40 disabled:hover:translate-y-0"
         >
           {status.type === "loading"
             ? "Un momento..."
@@ -266,7 +266,7 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
             <button
               type="button"
               onClick={() => handleModeChange("register")}
-              className="font-semibold text-coral hover:underline"
+              className="font-semibold text-cta hover:underline"
             >
               Crear cuenta gratis
             </button>
@@ -277,7 +277,7 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
             <button
               type="button"
               onClick={() => handleModeChange("login")}
-              className="font-semibold text-coral hover:underline"
+              className="font-semibold text-cta hover:underline"
             >
               Iniciar sesion
             </button>
@@ -286,7 +286,7 @@ export function AuthForm({ defaultMode = "login" }: { defaultMode?: Mode }) {
       </p>
 
       <p className="text-center text-xs text-stone/60">
-        <Link href="/" className="transition hover:text-coral">
+        <Link href="/" className="transition hover:text-cta">
           Volver al inicio sin registrarse
         </Link>
       </p>

@@ -1,28 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { fetchUnreadConversationsCount } from "@/lib/api";
+import { useIsMounted } from "@/lib/use-is-mounted";
 
 export function SiteHeader() {
   const { isAuthenticated, isRefreshing, isRestoring, logout, session, sessionNotice, auth } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Polling de conteo de mensajes no leídos cada 10s
   useEffect(() => {
     if (!auth) {
-      setUnreadCount(0);
       return;
     }
     const currentAuth = auth;
@@ -84,11 +81,9 @@ export function SiteHeader() {
         <div className="hidden items-center justify-between gap-6 lg:flex">
           <div className="flex items-center gap-10">
             <Link href="/" className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-full bg-coral text-sm font-semibold text-white shadow-[0_14px_24px_rgba(255,56,92,0.24)]">
-                LX
-              </div>
+              <Image src="/EMBLEMA.png" alt="Terrify" width={44} height={44} className="h-11 w-11 rounded-full object-contain shadow-[0_14px_24px_rgba(122,59,36,0.24)]" />
               <div className="leading-tight">
-                <p className="text-base font-semibold text-coral">Terrify</p>
+                <p className="text-base font-semibold text-primary">Terrify</p>
                 <p className="text-xs text-stone">Compra y vende terrenos con claridad</p>
               </div>
             </Link>
@@ -108,13 +103,13 @@ export function SiteHeader() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-coral text-[10px] font-bold text-white flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-danger text-[10px] font-bold text-white flex items-center justify-center">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </Link>
               )}
-              <Link href="/guia-legal" title="Guía antifraude" className="flex items-center gap-1.5 rounded-full px-4 py-2 font-bold text-coral/90 transition hover:bg-coral/5 hover:text-coral active:scale-95">
+              <Link href="/guia-legal" title="Guía antifraude" className="flex items-center gap-1.5 rounded-full px-4 py-2 font-bold text-primary/90 transition hover:bg-primary/5 hover:text-primary active:scale-95">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 Antifraude
               </Link>
@@ -124,7 +119,7 @@ export function SiteHeader() {
           <div className="flex items-center gap-3">
             <Link
               href="/publicar"
-              className="rounded-full bg-coral px-5 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(255,56,92,0.3)] transition hover:-translate-y-px hover:bg-[#e92a5b] hover:shadow-[0_6px_20px_rgba(255,56,92,0.4)] active:scale-95"
+              className="rounded-full bg-cta px-5 py-2 text-sm font-bold text-text shadow-[0_4px_14px_rgba(209,154,61,0.3)] transition hover:-translate-y-px hover:bg-cta-dark hover:shadow-[0_6px_20px_rgba(209,154,61,0.4)] active:scale-95"
             >
               Publica gratis
             </Link>
@@ -155,11 +150,9 @@ export function SiteHeader() {
         <div className="lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-full bg-coral text-sm font-semibold text-white shadow-[0_10px_24px_rgba(255,56,92,0.24)]">
-                LX
-              </div>
+              <Image src="/EMBLEMA.png" alt="Terrify" width={44} height={44} className="h-11 w-11 rounded-full object-contain shadow-[0_10px_24px_rgba(122,59,36,0.24)]" />
               <div className="leading-tight">
-                <p className="text-base font-semibold text-coral">Terrify</p>
+                <p className="text-base font-semibold text-primary">Terrify</p>
                 <p className="text-xs text-stone">Terrenos en tu zona</p>
               </div>
             </Link>
@@ -230,7 +223,7 @@ export function SiteHeader() {
                     </svg>
                     Mensajes
                     {unreadCount > 0 && (
-                      <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-coral text-[10px] font-bold text-white">
+                      <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
@@ -238,7 +231,7 @@ export function SiteHeader() {
                 )}
                 <Link
                   href="/guia-legal"
-                  className="flex items-center gap-2 rounded-2xl px-4 py-3 font-bold text-coral transition hover:bg-coral/5"
+                  className="flex items-center gap-2 rounded-2xl px-4 py-3 font-bold text-primary transition hover:bg-primary/5"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -269,7 +262,7 @@ Iniciar sesión
                   <Link
                     href="/publicar"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-center rounded-2xl bg-coral px-4 py-3.5 text-sm font-bold text-white transition hover:bg-[#e92a5b] active:scale-95"
+                    className="flex items-center justify-center rounded-2xl bg-cta px-4 py-3.5 text-sm font-bold text-text transition hover:bg-cta-dark active:scale-95"
                   >
                     Publica tu terreno gratis →
                   </Link>

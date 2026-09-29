@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { useAuth } from "@/components/auth-provider";
-import { useEffect, useState } from "react";
+import { useIsMounted } from "@/lib/use-is-mounted";
 
 type ProtectedActionProps = {
   actionLabel: string;
@@ -44,11 +44,7 @@ export function GuardedPanel({
   children,
 }: GuardedPanelProps) {
   const { isAuthenticated, isReady, isRestoring, sessionNotice } = useAuth();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   if (!isMounted || !isReady || isRestoring) {
     return (
@@ -61,7 +57,7 @@ export function GuardedPanel({
   if (!isAuthenticated) {
     return (
         <section className="rounded-[32px] border border-white/80 bg-white/88 p-8 shadow-panel">
-          <span className="inline-flex rounded-full bg-rose-50 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-coral">
+          <span className="inline-flex rounded-full bg-cta/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cta">
           Acceso requerido
         </span>
         <h2 className="mt-4 text-2xl font-semibold tracking-[-0.03em] text-ink">{title}</h2>
@@ -73,7 +69,7 @@ export function GuardedPanel({
         ) : null}
         <Link
           href={loginHref}
-          className="mt-6 inline-flex rounded-full bg-coral px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#e31c5f]"
+          className="mt-6 inline-flex rounded-full bg-cta px-5 py-3 text-sm font-semibold text-text transition hover:-translate-y-0.5 hover:bg-cta-dark"
         >
           {ctaLabel}
         </Link>

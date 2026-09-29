@@ -12,6 +12,8 @@ import type {
   UpdateTerrenoPayload,
 } from "@/lib/types";
 
+let refreshPromise: Promise<AuthSession | null> | null = null;
+
 type PaginatedResponse<T> = {
   count: number;
   next: string | null;
@@ -27,11 +29,27 @@ type TerrenoListApi = {
   municipio: string;
   estado: string;
   area_m2: string;
+  area_unit?: "m2" | "hectare";
   price: string;
+  price_per_m2: number | null;
   status: "active" | "paused" | "sold";
   is_featured: boolean;
   image: string | null;
   is_favorited?: boolean;
+  terrain_type?: string;
+  land_use?: string;
+  property_type?: string;
+  has_water?: boolean;
+  has_electricity?: boolean;
+  has_drainage?: boolean;
+  has_paved_road?: boolean;
+  accepts_financing?: boolean;
+  down_payment_amount?: string | null;
+  payment_facility_label?: string | null;
+  es_accesible_para_empezar?: boolean;
+  nearby_services?: string[];
+  latitude?: string | null;
+  longitude?: string | null;
   created_at?: string;
 };
 
@@ -41,7 +59,9 @@ type TerrenoDetailApi = {
   title: string;
   description: string;
   price: string;
+  price_per_m2: number | null;
   area_m2: string;
+  area_unit?: "m2" | "hectare";
   municipio: string;
   estado: string;
   address: string;
@@ -53,6 +73,16 @@ type TerrenoDetailApi = {
   is_favorited?: boolean;
   nearby_services?: string[];
   terrain_type?: string;
+  land_use?: string;
+  property_type?: string;
+  has_water?: boolean;
+  has_electricity?: boolean;
+  has_drainage?: boolean;
+  has_paved_road?: boolean;
+  accepts_financing?: boolean;
+  down_payment_amount?: string | null;
+  payment_facility_label?: string | null;
+  es_accesible_para_empezar?: boolean;
   images: Array<{
     id: string;
     image_url: string;
@@ -62,6 +92,7 @@ type TerrenoDetailApi = {
   owner: {
     full_name: string;
     is_verified: boolean;
+    email?: string;
   };
   created_at: string;
   updated_at: string;
@@ -166,7 +197,7 @@ class ApiError extends Error {
   }
 }
 
-export async function getApiBaseUrl() {
+export function getApiBaseUrl() {
   const rawBaseUrl =
     process.env.NEXT_PUBLIC_API_URL ??
     process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -185,10 +216,13 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-function formatArea(value: number) {
-  return `${new Intl.NumberFormat("es-MX", {
-    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
-  }).format(value)} m2`;
+function formatArea(value: number, unit?: string) {
+  const isHectare = unit === "hectare";
+  const converted = isHectare ? value / 10000 : value;
+  const formatted = new Intl.NumberFormat("es-MX", {
+    maximumFractionDigits: converted % 1 === 0 ? 0 : 2,
+  }).format(converted);
+  return isHectare ? `${formatted} ha` : `${formatted} m2`;
 }
 
 function toNumber(value: string | number | null | undefined) {
@@ -224,21 +258,35 @@ function mapTerrenoList(item: TerrenoListApi): Terreno {
     municipio: item.municipio,
     estado: item.estado,
     areaM2,
-    areaLabel: formatArea(areaM2),
+    areaLabel: formatArea(areaM2, item.area_unit),
     price,
     priceLabel: formatCurrency(price),
+    pricePerM2: item.price_per_m2 ?? null,
     status: item.status,
     isFeatured: item.is_featured,
     image: item.image,
     images: [],
     viewsCount: 0,
     address: "",
-    latitude: null,
-    longitude: null,
+    latitude: toNumber(item.latitude),
+    longitude: toNumber(item.longitude),
     owner: null,
     createdAt: item.created_at ?? null,
     updatedAt: null,
     isFavorited: item.is_favorited ?? false,
+    terrainType: item.terrain_type,
+    areaUnit: item.area_unit ?? "m2",
+    landUse: item.land_use ?? "",
+    propertyType: item.property_type ?? "",
+    hasWater: item.has_water ?? false,
+    hasElectricity: item.has_electricity ?? false,
+    hasDrainage: item.has_drainage ?? false,
+    hasPavedRoad: item.has_paved_road ?? false,
+    acceptsFinancing: item.accepts_financing ?? false,
+    downPaymentAmount: toNumber(item.down_payment_amount),
+    paymentFacilityLabel: item.payment_facility_label ?? null,
+    esAccesibleParaEmpezar: item.es_accesible_para_empezar,
+    nearbyServices: item.nearby_services,
   };
 }
 
@@ -255,9 +303,10 @@ function mapTerrenoDetail(item: TerrenoDetailApi): Terreno {
     municipio: item.municipio,
     estado: item.estado,
     areaM2,
-    areaLabel: formatArea(areaM2),
+    areaLabel: formatArea(areaM2, item.area_unit),
     price,
     priceLabel: formatCurrency(price),
+    pricePerM2: item.price_per_m2 ?? null,
     status: item.status as "active" | "paused" | "sold",
     isFeatured: item.is_featured,
     image: item.images.find((image) => image.is_cover)?.image_url ?? item.images[0]?.image_url ?? null,
@@ -274,11 +323,23 @@ function mapTerrenoDetail(item: TerrenoDetailApi): Terreno {
     owner: {
       fullName: item.owner.full_name,
       isVerified: item.owner.is_verified,
+      email: item.owner.email,
     },
     createdAt: item.created_at,
     updatedAt: item.updated_at,
     nearbyServices: item.nearby_services ?? [],
     terrainType: item.terrain_type,
+    areaUnit: item.area_unit ?? "m2",
+    landUse: item.land_use ?? "",
+    propertyType: item.property_type ?? "",
+    hasWater: item.has_water ?? false,
+    hasElectricity: item.has_electricity ?? false,
+    hasDrainage: item.has_drainage ?? false,
+    hasPavedRoad: item.has_paved_road ?? false,
+    acceptsFinancing: item.accepts_financing ?? false,
+    downPaymentAmount: toNumber(item.down_payment_amount),
+    paymentFacilityLabel: item.payment_facility_label ?? null,
+    esAccesibleParaEmpezar: item.es_accesible_para_empezar,
   };
 }
 
@@ -387,10 +448,20 @@ async function requestJson<T>(
     preferredErrorKeys?: string[];
   },
 ): Promise<T> {
-  const response = await fetch(`${await getApiBaseUrl()}${path}`, {
-    ...init,
-    ...(next ? { next } : {}),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${await getApiBaseUrl()}${path}`, {
+      ...init,
+      ...(next ? { next } : {}),
+    });
+  } catch (error) {
+    throw new ApiError(
+      "No se pudo conectar con el servidor. Revisa que el backend este encendido.",
+      0,
+      error,
+    );
+  }
 
   const data = await readJsonResponse<T>(response);
 
@@ -558,11 +629,21 @@ async function requestAuthenticatedJson<T>(
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${currentAccessToken}`);
 
-    const response = await fetch(`${await getApiBaseUrl()}${path}`, {
-      ...init,
-      headers,
-      cache: init.cache ?? "no-store",
-    });
+    let response: Response;
+
+    try {
+      response = await fetch(`${await getApiBaseUrl()}${path}`, {
+        ...init,
+        headers,
+        cache: init.cache ?? "no-store",
+      });
+    } catch (error) {
+      throw new ApiError(
+        "No se pudo conectar con el servidor. Revisa que el backend este encendido.",
+        0,
+        error,
+      );
+    }
 
     const data = await readJsonResponse<T>(response);
 
@@ -572,7 +653,14 @@ async function requestAuthenticatedJson<T>(
 
     if (response.status === 401 && attempt === 0) {
       auth.onRefreshStart?.();
-      const refreshedSession = await refreshAuthSession(currentRefreshToken);
+
+      if (!refreshPromise) {
+        refreshPromise = refreshAuthSession(currentRefreshToken).finally(() => {
+          refreshPromise = null;
+        });
+      }
+
+      const refreshedSession = await refreshPromise;
 
       if (!refreshedSession) {
         auth.onRefreshFailure?.();
@@ -603,9 +691,20 @@ export type TerrenoFilters = {
   precio_max?: number;
   min_area?: number;
   max_area?: number;
+  area_unit?: "m2" | "hectare";
   ordering?: string;
   is_featured?: boolean;
   search?: string;
+  terrain_type?: string;
+  servicio?: string;
+  land_use?: string;
+  property_type?: string;
+  has_water?: boolean;
+  has_electricity?: boolean;
+  has_drainage?: boolean;
+  has_paved_road?: boolean;
+  accepts_financing?: boolean;
+  accesible_para_empezar?: boolean;
 };
 
 function mapTerrenoOrdering(ordering?: string) {
@@ -616,6 +715,7 @@ function mapTerrenoOrdering(ordering?: string) {
     recientes: "-created_at",
     area_asc: "area_m2",
     area_desc: "-area_m2",
+    precio_m2_asc: "price_per_m2",
   };
   return map[ordering] ?? ordering;
 }
@@ -647,6 +747,10 @@ export async function fetchTerrenos(page = 1, filters: TerrenoFilters = {}) {
     params.set("max_area", String(filters.max_area));
   }
 
+  if (filters.area_unit) {
+    params.set("area_unit", filters.area_unit);
+  }
+
   const mappedOrdering = mapTerrenoOrdering(filters.ordering);
   if (mappedOrdering) {
     params.set("ordering", mappedOrdering);
@@ -660,16 +764,56 @@ export async function fetchTerrenos(page = 1, filters: TerrenoFilters = {}) {
     params.set("search", filters.search);
   }
 
+  if (filters.terrain_type) {
+    params.set("terrain_type", filters.terrain_type);
+  }
+
+  if (filters.land_use) {
+    params.set("land_use", filters.land_use);
+  }
+
+  if (filters.property_type) {
+    params.set("property_type", filters.property_type);
+  }
+
+  if (filters.has_water !== undefined) {
+    params.set("has_water", String(filters.has_water));
+  }
+
+  if (filters.has_electricity !== undefined) {
+    params.set("has_electricity", String(filters.has_electricity));
+  }
+
+  if (filters.has_drainage !== undefined) {
+    params.set("has_drainage", String(filters.has_drainage));
+  }
+
+  if (filters.has_paved_road !== undefined) {
+    params.set("has_paved_road", String(filters.has_paved_road));
+  }
+
+  if (filters.accepts_financing !== undefined) {
+    params.set("accepts_financing", String(filters.accepts_financing));
+  }
+
+  if (filters.servicio) {
+    params.set("servicio", filters.servicio);
+  }
+
+  if (filters.accesible_para_empezar !== undefined) {
+    params.set("accesible_para_empezar", String(filters.accesible_para_empezar));
+  }
+
   const queryString = params.toString();
   const path = queryString
     ? `/terrenos/?${queryString}`
-    : (page > 1 ? "/terrenos/" : "/terrenos/");
+    : "/terrenos/";
 
   const response = await requestJson<PaginatedResponse<TerrenoListApi>>(
     path,
     {},
     {
-      next: { revalidate: 60 },
+      next: { revalidate: 30 },
       fallbackMessage: "No se pudieron cargar los terrenos.",
     },
   );
@@ -685,7 +829,7 @@ export async function fetchTerrenoBySlug(slug: string) {
     `/terrenos/${slug}/`,
     {},
     {
-      next: { revalidate: 60 },
+      next: { revalidate: 30 },
       fallbackMessage: "No se pudo cargar el terreno.",
     },
   );
@@ -739,13 +883,13 @@ export async function fetchReceivedContacts(auth: AuthRequestOptions) {
 }
 
 export async function fetchMyConversations(auth: AuthRequestOptions): Promise<ContactRequest[]> {
-  const response = await requestAuthenticatedJson<ContactRequestApi[]>(
+  const response = await requestAuthenticatedJson<PaginatedResponse<ContactRequestApi>>(
     "/contact-requests/mine/",
     auth,
     { method: "GET" },
     { fallbackMessage: "No se pudieron cargar las conversaciones." },
   );
-  return response.map(mapContactRequest);
+  return response.results.map(mapContactRequest);
 }
 
 export async function fetchUnreadConversationsCount(auth: AuthRequestOptions): Promise<number> {
@@ -878,6 +1022,15 @@ export async function createTerreno(payload: CreateTerrenoPayload, auth: AuthReq
         status: payload.status,
         nearby_services: payload.nearbyServices ?? [],
         terrain_type: payload.terrainType ?? "",
+        land_use: payload.landUse ?? undefined,
+        property_type: payload.propertyType ?? undefined,
+        has_water: payload.hasWater ?? undefined,
+        has_electricity: payload.hasElectricity ?? undefined,
+        has_drainage: payload.hasDrainage ?? undefined,
+        has_paved_road: payload.hasPavedRoad ?? undefined,
+        accepts_financing: payload.acceptsFinancing ?? false,
+        down_payment_amount: payload.downPaymentAmount ?? undefined,
+        area_unit: payload.areaUnit ?? undefined,
       }),
     },
     {
@@ -929,6 +1082,15 @@ export async function updateTerreno(
         status: payload.status,
         nearby_services: payload.nearbyServices ?? [],
         terrain_type: payload.terrainType ?? "",
+        land_use: payload.landUse ?? undefined,
+        property_type: payload.propertyType ?? undefined,
+        has_water: payload.hasWater ?? undefined,
+        has_electricity: payload.hasElectricity ?? undefined,
+        has_drainage: payload.hasDrainage ?? undefined,
+        has_paved_road: payload.hasPavedRoad ?? undefined,
+        accepts_financing: payload.acceptsFinancing ?? false,
+        down_payment_amount: payload.downPaymentAmount ?? undefined,
+        area_unit: payload.areaUnit ?? undefined,
       }),
     },
     {
@@ -1098,4 +1260,34 @@ export async function sendMessage(
     { fallbackMessage: "No se pudo enviar el mensaje." },
   );
   return mapMessage(response);
+}
+
+export async function setTerrenoStatus(
+  slug: string,
+  status: "active" | "sold" | "paused",
+  auth: AuthRequestOptions,
+): Promise<Terreno> {
+  const response = await requestAuthenticatedJson<TerrenoDetailApi>(
+    `/terrenos/${slug}/set_status/`,
+    auth,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+    { fallbackMessage: "No se pudo actualizar el estado." },
+  );
+  return mapTerrenoDetail(response);
+}
+
+export async function deleteTerreno(
+  slug: string,
+  auth: AuthRequestOptions,
+): Promise<void> {
+  await requestAuthenticatedJson<null>(
+    `/terrenos/${slug}/`,
+    auth,
+    { method: "DELETE" },
+    { fallbackMessage: "No se pudo eliminar el terreno." },
+  );
 }

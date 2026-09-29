@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { TerrainCard } from "@/components/terrain-card";
+import { TerrainCard } from "@/components/terrain/TerrainCard";
 import { useAuth } from "@/components/auth-provider";
 import { fetchFavorites } from "@/lib/api";
 import Link from "next/link";
@@ -34,8 +34,8 @@ export default function FavoritosPage() {
         if (mounted) {
           setFavorites(data);
         }
-      } catch (error) {
-        console.error("Error cargando favoritos:", error);
+      } catch {
+        // Error silencioso — el estado inicial vacío es suficiente feedback
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -48,10 +48,10 @@ export default function FavoritosPage() {
 
   if (isRestoring || (isAuthenticated && isLoading)) {
     return (
-      <main className="min-h-screen bg-[#fffdf9]">
+      <main className="min-h-screen bg-background">
         <SiteHeader />
         <div className="flex h-[60vh] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-coral border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-cta border-t-transparent" />
         </div>
       </main>
     );
@@ -60,7 +60,7 @@ export default function FavoritosPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <main className="min-h-screen relative bg-[#fffdf9] selection:bg-coral/20 pb-24">
+    <main className="min-h-screen relative bg-background selection:bg-cta/20 pb-24">
       <SiteHeader />
 
       {/* Decorative Orbs */}
@@ -86,7 +86,7 @@ export default function FavoritosPage() {
           </div>
         ) : (
           <div className="rounded-[2.5rem] border border-line/50 bg-white/50 p-12 text-center shadow-sm backdrop-blur-sm">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-coral/10 text-coral mb-6">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cta/10 text-cta mb-6">
               <svg className="h-10 w-10 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
               </svg>
@@ -97,7 +97,7 @@ export default function FavoritosPage() {
             </p>
             <Link
               href="/#listado"
-              className="inline-flex items-center justify-center rounded-full bg-ink px-8 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+              className="inline-flex items-center justify-center rounded-full bg-cta px-8 py-3.5 text-sm font-bold text-text transition hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
             >
               Explorar terrenos
             </Link>

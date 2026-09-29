@@ -31,7 +31,7 @@ export function TerrenoInfoPanel({ contactId }: TerrenoInfoPanelProps) {
     return (
       <div className="hidden lg:flex w-72 flex-shrink-0 border-l border-line/40 bg-white">
         <div className="flex items-center justify-center w-full">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-sand border-t-coral" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-background border-t-cta" />
         </div>
       </div>
     );
@@ -66,7 +66,7 @@ export function TerrenoInfoPanel({ contactId }: TerrenoInfoPanelProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-coral">Ver precio</span>
+          <span className="text-lg font-bold text-cta">Ver precio</span>
         </div>
 
         <Link

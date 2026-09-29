@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useCallback, useEffect } from "react";
 
 type ImageItem = {
@@ -51,10 +52,12 @@ function Lightbox({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
 
-  useEffect(() => {
+  if (initialIndex !== prevInitialIndex) {
+    setPrevInitialIndex(initialIndex);
     setCurrentIndex(initialIndex);
-  }, [initialIndex]);
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -156,10 +159,13 @@ function Lightbox({
 
       {/* Image */}
       <div className="relative h-full w-full max-w-5xl px-4 py-16">
-        <img
-          src={images[currentIndex]?.imageUrl}
+        <Image
+          src={images[currentIndex]?.imageUrl ?? ""}
           alt={`Imagen ${currentIndex + 1}`}
-          className="h-full w-full object-contain"
+          fill
+          sizes="(max-width: 1024px) 100vw, 1024px"
+          className="object-contain"
+          priority
         />
       </div>
     </div>
@@ -188,10 +194,13 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
   // Mobile: single image with view all button
   const mobileView = (
     <div className="relative h-[56vw] max-h-[420px] w-full overflow-hidden lg:hidden">
-      <img
+      <Image
         src={sortedImages[0].imageUrl}
         alt={title}
-        className="h-full w-full object-cover"
+        fill
+        sizes="100vw"
+        className="object-cover"
+        priority
       />
       {images.length > 1 && (
         <button
@@ -216,10 +225,13 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
     if (sortedImages.length === 1) {
       return (
         <div className="hidden h-[480px] w-full overflow-hidden lg:block">
-          <img
+          <Image
             src={sortedImages[0].imageUrl}
             alt={title}
-            className="h-full w-full object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
+            priority
           />
         </div>
       );
@@ -233,20 +245,24 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
             onClick={() => openLightbox(0)}
             className="relative h-full w-full overflow-hidden"
           >
-            <img
+            <Image
               src={sortedImages[0].imageUrl}
               alt={`${title} - 1`}
-              className="h-full w-full object-cover transition hover:scale-105"
+              fill
+              sizes="(max-width: 1024px) 100vw, 60vw"
+              className="object-cover transition hover:scale-105"
             />
           </button>
           <button
             onClick={() => openLightbox(1)}
             className="relative h-full w-full overflow-hidden"
           >
-            <img
+            <Image
               src={sortedImages[1].imageUrl}
               alt={`${title} - 2`}
-              className="h-full w-full object-cover transition hover:scale-105"
+              fill
+              sizes="(max-width: 1024px) 100vw, 40vw"
+              className="object-cover transition hover:scale-105"
             />
           </button>
         </div>
@@ -264,10 +280,12 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
           onClick={() => openLightbox(0)}
           className="relative h-full w-full overflow-hidden"
         >
-          <img
+          <Image
             src={displayImages[0].imageUrl}
             alt={`${title} - principal`}
-            className="h-full w-full object-cover transition duration-300 hover:scale-105"
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className="object-cover transition duration-300 hover:scale-105"
           />
         </button>
 
@@ -279,10 +297,12 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               onClick={() => openLightbox(index + 1)}
               className="relative h-full w-full overflow-hidden"
             >
-              <img
+              <Image
                 src={image.imageUrl}
                 alt={`${title} - ${index + 2}`}
-                className="h-full w-full object-cover transition duration-300 hover:scale-105"
+                fill
+                sizes="(max-width: 1024px) 50vw, 25vw"
+                className="object-cover transition duration-300 hover:scale-105"
               />
             </button>
           ))}
@@ -292,10 +312,12 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
               onClick={() => openLightbox(4)}
               className="relative h-full w-full overflow-hidden"
             >
-              <img
+              <Image
                 src={displayImages[4].imageUrl}
                 alt={`${title} - 5`}
-                className="h-full w-full object-cover transition duration-300 hover:scale-105"
+                fill
+                sizes="(max-width: 1024px) 50vw, 25vw"
+                className="object-cover transition duration-300 hover:scale-105"
               />
               {hasMoreThan5 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">

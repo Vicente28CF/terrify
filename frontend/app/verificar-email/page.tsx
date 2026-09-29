@@ -12,13 +12,11 @@ export default function VerificarEmailPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
-  const [status, setStatus] = useState<Status>("loading");
-  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<Status>(token ? "loading" : "error");
+  const [message, setMessage] = useState(token ? "" : "Token no encontrado.");
 
   useEffect(() => {
     if (!token) {
-      setStatus("error");
-      setMessage("Token no encontrado.");
       return;
     }
 
@@ -69,16 +67,16 @@ export default function VerificarEmailPage() {
       <div className="w-full max-w-md rounded-3xl border border-white/60 bg-white p-10 text-center shadow-lg">
         {status === "loading" ? (
           <>
-            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-coral border-t-transparent" />
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-background border-t-cta" />
             <p className="text-sm text-stone">Verificando tu cuenta...</p>
           </>
         ) : null}
 
         {status === "success" ? (
           <>
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-success/15">
               <svg
-                className="h-8 w-8 text-emerald-500"
+                className="h-8 w-8 text-success"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -118,7 +116,7 @@ export default function VerificarEmailPage() {
             <p className="mt-2 text-sm text-stone">{message}</p>
             <Link
               href="/login"
-              className="mt-6 inline-block rounded-full bg-coral px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#e92a5b]"
+              className="mt-6 inline-block rounded-full bg-cta px-6 py-2.5 text-sm font-bold text-text transition hover:bg-cta-dark"
             >
               Volver al login
             </Link>

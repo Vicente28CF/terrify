@@ -73,7 +73,7 @@ export function MobileBottomNav() {
                 href={item.href}
                 className={`flex flex-col items-center gap-1 rounded-2xl px-3 py-2.5 text-[11px] font-semibold transition-all ${
                   isActive
-                    ? "bg-coral/10 text-coral"
+                    ? "bg-cta/10 text-cta"
                     : "text-stone hover:text-ink"
                 }`}
               >

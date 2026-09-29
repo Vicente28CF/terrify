@@ -1,27 +1,14 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { DM_Sans, Sora } from "next/font/google";
 import Script from "next/script";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { NuqsProvider } from "@/components/nuqs-provider";
+import { QueryProvider } from "@/components/query-provider";
 import { SiteFooter } from "@/components/site-footer";
 
 import "./globals.css";
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-dm-sans",
-  display: "swap",
-});
-
-const sora = Sora({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-sora",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {
@@ -41,18 +28,25 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
   },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" data-scroll-behavior="smooth" className={`${dmSans.variable} ${sora.variable}`}>
-      <body>
+    <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <Script
           src="https://accounts.google.com/gsi/client"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
         <AuthProvider>
-          {children}
+          <QueryProvider>
+            <NuqsProvider>
+              {children}
+            </NuqsProvider>
+          </QueryProvider>
           <SiteFooter />
           <MobileBottomNav />
         </AuthProvider>

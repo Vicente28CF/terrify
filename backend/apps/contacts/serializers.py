@@ -1,3 +1,4 @@
+from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from apps.terrenos.models import Terreno
@@ -51,7 +52,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         fields = ("body",)
 
     def validate_body(self, value):
-        clean = value.strip()
+        clean = strip_tags(value.strip())
         if len(clean) < 2:
             raise serializers.ValidationError("El mensaje es muy corto.")
         if len(clean) > 1000:
@@ -124,9 +125,10 @@ class ContactRequestListSerializer(serializers.ModelSerializer):
         return {"title": obj.terreno.title, "slug": obj.terreno.slug}
 
     def get_last_message(self, obj):
-        last = obj.messages.last()
-        if last:
-            return {"body": last.body[:80], "created_at": last.created_at}
+        body = getattr(obj, "last_msg_body", None)
+        created_at = getattr(obj, "last_msg_created", None)
+        if body and created_at:
+            return {"body": body[:80], "created_at": created_at}
         return None
 
 

@@ -23,7 +23,14 @@ export async function generateMetadata({ params }: TerrenoDetailPageProps): Prom
       openGraph: {
         title: `${terreno.title} — Terrify`,
         description: terreno.shortDescription,
-        images: terreno.image ? [{ url: terreno.image }] : [],
+        url: `https://terrify.mx/terrenos/${terreno.slug}`,
+        images: terreno.image ? [{ url: terreno.image, width: 1200, height: 630 }] : [],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${terreno.title} — Terrify`,
+        description: terreno.shortDescription,
+        images: terreno.image ? [terreno.image] : [],
       },
     };
   } catch {
@@ -69,7 +76,7 @@ function InfoChip({
 }) {
   if (variant === "dark") {
     return (
-      <div className="flex items-center gap-2 rounded-xl bg-[#111214] px-4 py-3 text-white">
+      <div className="flex items-center gap-2 rounded-xl bg-ink px-4 py-3 text-white">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <polyline points="22 4 12 14.01 9 11.01" />
@@ -83,9 +90,9 @@ function InfoChip({
   }
 
   return (
-    <div className="rounded-xl bg-[#f5f5f3] px-4 py-3">
-      <span className="block text-[10px] uppercase tracking-wider text-[#6b6b68]">{label}</span>
-      <span className="text-sm font-semibold text-[#111214]">{value}</span>
+    <div className="rounded-xl bg-background-alt px-4 py-3">
+      <span className="block text-[10px] uppercase tracking-wider text-text-muted">{label}</span>
+      <span className="text-sm font-semibold text-text">{value}</span>
     </div>
   );
 }
@@ -94,15 +101,15 @@ function TitleAndPrice({ terreno }: { terreno: Terreno }) {
   return (
     <div className="mb-4">
       <div className="flex items-start justify-between gap-4">
-        <h1 className="font-display text-2xl font-bold leading-tight text-[#111214] lg:text-4xl">
+        <h1 className="font-display text-2xl font-bold leading-tight text-text lg:text-4xl">
           {terreno.title}
         </h1>
         <div className="text-right shrink-0">
-          <p className="font-display text-xl font-bold text-[#E8184A]">{terreno.priceLabel}</p>
-          <p className="text-[10px] uppercase tracking-wider text-[#6b6b68]">Pesos Mexicanos</p>
+          <p className="font-display text-xl font-bold text-cta">{terreno.priceLabel}</p>
+          <p className="text-[10px] uppercase tracking-wider text-text-muted">Pesos Mexicanos</p>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-1 text-[#6b6b68]">
+      <div className="mt-2 flex items-center gap-1 text-text-muted">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
@@ -117,9 +124,9 @@ function TitleAndPrice({ terreno }: { terreno: Terreno }) {
 
 function DescriptionSection({ description }: { description: string }) {
   return (
-    <section className="border-t border-[#e7e2db] py-6">
-      <h2 className="mb-3 font-display text-lg font-semibold text-[#111214]">Descripción</h2>
-      <p className="text-sm leading-relaxed text-[#6b6b68]">{description}</p>
+    <section className="border-t border-line py-6">
+      <h2 className="mb-3 font-display text-lg font-semibold text-text">Descripción</h2>
+      <p className="text-sm leading-relaxed text-text-muted">{description}</p>
     </section>
   );
 }
@@ -144,14 +151,14 @@ function LocationSection({
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
   return (
-    <section className="border-t border-[#e7e2db] py-6">
+    <section className="border-t border-line py-6">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-display text-lg font-semibold text-[#111214]">Ubicación</h2>
+        <h2 className="font-display text-lg font-semibold text-text">Ubicación</h2>
         <a
           href={mapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1 text-sm font-medium text-[#E8184A] transition hover:underline"
+          className="flex items-center gap-1 text-sm font-medium text-cta transition hover:underline"
         >
           Ver en Mapas
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -161,7 +168,7 @@ function LocationSection({
       </div>
 
       {hasCoordinates ? (
-        <div className="overflow-hidden rounded-xl border border-[#e7e2db]">
+        <div className="overflow-hidden rounded-xl border border-line">
           <iframe
             src={`https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d3000!2d${longitude}!3d${latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ses!2smx!4v1`}
             width="100%"
@@ -170,19 +177,19 @@ function LocationSection({
             allowFullScreen
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
-            className="bg-[#f5f5f3]"
+            className="bg-background-alt"
           />
         </div>
       ) : (
-        <div className="rounded-xl bg-[#f5f5f3] p-6 text-center">
-          <p className="mb-2 text-sm text-[#6b6b68]">
+        <div className="rounded-xl bg-background-alt p-6 text-center">
+          <p className="mb-2 text-sm text-text-muted">
             {municipio}, {estado}
           </p>
           <a
             href={mapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm font-medium text-[#E8184A] hover:underline"
+            className="text-sm font-medium text-cta hover:underline"
           >
             Ver ubicación aproximada en Google Maps
           </a>
@@ -190,8 +197,8 @@ function LocationSection({
       )}
 
       {address && (
-        <p className="mt-3 text-sm text-[#6b6b68]">
-          <span className="font-medium text-[#111214]">Dirección:</span> {address}
+        <p className="mt-3 text-sm text-text-muted">
+          <span className="font-medium text-text">Dirección:</span> {address}
         </p>
       )}
     </section>
@@ -209,16 +216,16 @@ function SellerCard({ owner }: { owner: { fullName: string; isVerified: boolean 
     .toUpperCase();
 
   return (
-    <section className="border-t border-[#e7e2db] py-6">
-      <h2 className="mb-3 font-display text-lg font-semibold text-[#111214]">Información del vendedor</h2>
-      <div className="flex items-center gap-3 rounded-xl border border-[#e7e2db] p-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8184A] text-white font-semibold">
+    <section className="border-t border-line py-6">
+      <h2 className="mb-3 font-display text-lg font-semibold text-text">Información del vendedor</h2>
+      <div className="flex items-center gap-3 rounded-xl border border-line p-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cta text-white font-semibold">
           {initials}
         </div>
         <div>
-          <p className="font-medium text-[#111214]">{owner.fullName}</p>
+          <p className="font-medium text-text">{owner.fullName}</p>
           {owner.isVerified && (
-            <span className="inline-flex items-center gap-1 text-xs text-[#0f9172]">
+            <span className="inline-flex items-center gap-1 text-xs text-success">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
               </svg>
@@ -287,19 +294,27 @@ export default async function TerrenoDetailPage({ params }: TerrenoDetailPagePro
 
           {/* Right Column - Sidebar (Desktop only) */}
           <div className="hidden lg:block">
-            <div className="sticky top-8 rounded-2xl border border-[#e7e2db] bg-white p-6 shadow-lg">
-              <div className="mb-4 border-b border-[#e7e2db] pb-4">
-                <p className="font-display text-2xl font-bold text-[#E8184A]">{terreno.priceLabel}</p>
-                <p className="text-xs uppercase tracking-wider text-[#6b6b68]">Pesos Mexicanos</p>
+            <div className="sticky top-8 rounded-2xl border border-line bg-white p-6 shadow-lg">
+              <div className="mb-4 border-b border-line pb-4">
+                <p className="font-display text-2xl font-bold text-cta">{terreno.priceLabel}</p>
+                <p className="text-xs uppercase tracking-wider text-text-muted">Pesos Mexicanos</p>
               </div>
-              <ContactFormPanel terrenoSlug={terreno.slug} terrenoTitle={terreno.title} />
+              <ContactFormPanel 
+                terrenoSlug={terreno.slug} 
+                terrenoTitle={terreno.title} 
+                ownerEmail={terreno.owner?.email}
+              />
             </div>
           </div>
         </div>
       </main>
 
       {/* Mobile Contact Bar */}
-      <MobileContactBar terrenoSlug={terreno.slug} terrenoTitle={terreno.title} />
+      <MobileContactBar 
+        terrenoSlug={terreno.slug} 
+        terrenoTitle={terreno.title}
+        ownerEmail={terreno.owner?.email}
+      />
     </div>
   );
 }

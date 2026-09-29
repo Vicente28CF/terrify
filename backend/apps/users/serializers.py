@@ -39,7 +39,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         email = value.strip().lower()
         if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError("Ya existe una cuenta con este email.")
+            raise serializers.ValidationError("Si el email ya esta registrado, recibiras un enlace para recuperar tu cuenta.")
         return email
 
     def validate_full_name(self, value):

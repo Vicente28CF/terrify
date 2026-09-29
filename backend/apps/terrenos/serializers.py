@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from .models import Terreno, TerrenoImage
@@ -16,6 +17,9 @@ class TerrenoListSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     short_description = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
+    es_accesible_para_empezar = serializers.BooleanField(read_only=True)
+    price_per_m2 = serializers.SerializerMethodField()
+    payment_facility_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Terreno
@@ -27,11 +31,27 @@ class TerrenoListSerializer(serializers.ModelSerializer):
             "municipio",
             "estado",
             "area_m2",
+            "area_unit",
             "price",
+            "price_per_m2",
             "status",
             "is_featured",
             "image",
             "is_favorited",
+            "terrain_type",
+            "land_use",
+            "property_type",
+            "has_water",
+            "has_electricity",
+            "has_drainage",
+            "has_paved_road",
+            "accepts_financing",
+            "down_payment_amount",
+            "payment_facility_label",
+            "es_accesible_para_empezar",
+            "nearby_services",
+            "latitude",
+            "longitude",
         )
 
     def get_image(self, obj):
@@ -45,16 +65,26 @@ class TerrenoListSerializer(serializers.ModelSerializer):
         return obj.description[:140].strip()
 
     def get_is_favorited(self, obj):
-        request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            return request.user.favorites.filter(terreno=obj).exists()
-        return False
+        return getattr(obj, "is_favorited", False)
+
+    def get_price_per_m2(self, obj):
+        if obj.area_m2:
+            return round(obj.price / obj.area_m2, 2)
+        return None
+
+    def get_payment_facility_label(self, obj):
+        if not obj.accepts_financing or obj.down_payment_amount is None:
+            return None
+        return f"Enganche desde ${obj.down_payment_amount:,.0f}"
 
 
 class TerrenoDetailSerializer(serializers.ModelSerializer):
     images = TerrenoImageSerializer(many=True, read_only=True)
     owner = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
+    es_accesible_para_empezar = serializers.BooleanField(read_only=True)
+    price_per_m2 = serializers.SerializerMethodField()
+    payment_facility_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Terreno
@@ -64,7 +94,9 @@ class TerrenoDetailSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "price",
+            "price_per_m2",
             "area_m2",
+            "area_unit",
             "municipio",
             "estado",
             "address",
@@ -78,21 +110,42 @@ class TerrenoDetailSerializer(serializers.ModelSerializer):
             "is_favorited",
             "nearby_services",
             "terrain_type",
+            "land_use",
+            "property_type",
+            "has_water",
+            "has_electricity",
+            "has_drainage",
+            "has_paved_road",
+            "accepts_financing",
+            "down_payment_amount",
+            "payment_facility_label",
+            "es_accesible_para_empezar",
             "created_at",
             "updated_at",
         )
 
     def get_owner(self, obj):
-        return {
+        request = self.context.get("request")
+        data = {
             "full_name": obj.user.full_name,
             "is_verified": obj.user.is_verified,
         }
+        if request and request.user.is_authenticated:
+            data["email"] = obj.user.email
+        return data
 
     def get_is_favorited(self, obj):
-        request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            return request.user.favorites.filter(terreno=obj).exists()
-        return False
+        return getattr(obj, "is_favorited", False)
+
+    def get_price_per_m2(self, obj):
+        if obj.area_m2:
+            return round(obj.price / obj.area_m2, 2)
+        return None
+
+    def get_payment_facility_label(self, obj):
+        if not obj.accepts_financing or obj.down_payment_amount is None:
+            return None
+        return f"Enganche desde ${obj.down_payment_amount:,.0f}"
 
 
 class TerrenoWriteSerializer(serializers.ModelSerializer):
@@ -103,6 +156,7 @@ class TerrenoWriteSerializer(serializers.ModelSerializer):
             "description",
             "price",
             "area_m2",
+            "area_unit",
             "municipio",
             "estado",
             "address",
@@ -112,6 +166,14 @@ class TerrenoWriteSerializer(serializers.ModelSerializer):
             "is_featured",
             "nearby_services",
             "terrain_type",
+            "land_use",
+            "property_type",
+            "has_water",
+            "has_electricity",
+            "has_drainage",
+            "has_paved_road",
+            "accepts_financing",
+            "down_payment_amount",
         )
         read_only_fields = ("is_featured",)
 
@@ -125,7 +187,16 @@ class TerrenoWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El area debe ser mayor a cero.")
         return value
 
+    def validate_down_payment_amount(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("El enganche no puede ser negativo.")
+        return value
+
     def validate(self, attrs):
+        for field in ("title", "description", "address", "terrain_type"):
+            if field in attrs and attrs[field]:
+                attrs[field] = strip_tags(attrs[field])
+
         latitude = attrs.get("latitude", getattr(self.instance, "latitude", None))
         longitude = attrs.get("longitude", getattr(self.instance, "longitude", None))
 
@@ -141,12 +212,6 @@ class TerrenoWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"longitude": "Longitud fuera de rango."})
 
         return attrs
-
-
-class TerrenoStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Terreno
-        fields = ("status",)
 
 
 class TerrenoImageWriteSerializer(serializers.ModelSerializer):
