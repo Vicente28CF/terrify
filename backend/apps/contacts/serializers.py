@@ -100,7 +100,6 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class ContactRequestListSerializer(serializers.ModelSerializer):
     terreno      = serializers.SerializerMethodField()
-    messages     = MessageSerializer(many=True, read_only=True)
     last_message = serializers.SerializerMethodField()
 
     class Meta:
@@ -117,7 +116,6 @@ class ContactRequestListSerializer(serializers.ModelSerializer):
             "notification_sent_at",
             "notification_error",
             "created_at",
-            "messages",
             "last_message",
         )
 

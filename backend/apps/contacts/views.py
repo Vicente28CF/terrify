@@ -1,6 +1,6 @@
 import logging
 
-from django.db.models import Max, Q
+from django.db.models import OuterRef, Q, Subquery
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,6 +21,17 @@ from .tasks import send_contact_notification_task, send_reply_notification_task
 logger = logging.getLogger(__name__)
 
 
+def _annotate_last_message(queryset):
+    """Adjunta el cuerpo y fecha del último mensaje (Subquery, sin N+1)."""
+    last_message = (
+        Message.objects.filter(contact_request=OuterRef("pk")).order_by("-created_at")
+    )
+    return queryset.annotate(
+        last_msg_body=Subquery(last_message.values("body")[:1]),
+        last_msg_created=Subquery(last_message.values("created_at")[:1]),
+    )
+
+
 class ContactRequestViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -30,15 +41,9 @@ class ContactRequestViewSet(
     http_method_names = ["get", "post", "patch"]
 
     def get_queryset(self):
-        queryset = (
+        queryset = _annotate_last_message(
             ContactRequest.objects.select_related("terreno", "buyer", "terreno__user")
-            .prefetch_related("messages")
-            .annotate(
-                last_msg_body=Max("messages__body"),
-                last_msg_created=Max("messages__created_at"),
-            )
-            .order_by("-created_at")
-        )
+        ).order_by("-created_at")
         queryset = queryset.filter(terreno__user=self.request.user)
 
         status_filter = self.request.query_params.get("status")
@@ -116,16 +121,9 @@ class ContactRequestViewSet(
     def mine(self, request):
         """Lista todas las solicitudes de contacto donde el usuario es comprador o vendedor."""
         user = request.user
-        queryset = (
+        queryset = _annotate_last_message(
             ContactRequest.objects.select_related("terreno", "buyer", "terreno__user")
-            .prefetch_related("messages")
-            .annotate(
-                last_msg_body=Max("messages__body"),
-                last_msg_created=Max("messages__created_at"),
-            )
-            .filter(Q(buyer=user) | Q(terreno__user=user))
-            .order_by("-created_at")
-        )
+        ).filter(Q(buyer=user) | Q(terreno__user=user)).order_by("-created_at")
 
         status_filter = request.query_params.get("status")
         if status_filter in {

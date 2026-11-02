@@ -30,7 +30,7 @@ docker compose restart backend    # DESPUÉS de editar código backend (ver Crit
 cd frontend && pnpm install && pnpm run dev    # Dev server
 cd frontend && pnpm exec tsc --noEmit         # TypeScript (usa este)
 cd frontend && pnpm run build                 # Production build
-# pnpm run lint está ROTO: Next 16 eliminó `next lint` y ESLint no está instalado en devDependencies
+# pnpm run lint = `eslint .` (ESLint 9 con eslint.config.mjs)
 ```
 
 Tests backend por app (los tests de terrenos están en un paquete, no en un archivo):
@@ -135,16 +135,13 @@ Labels calculados en serializer: `payment_facility_label` = `"Enganche desde $X"
 | 3 | Backend Security | `backend/apps/contacts/services.py:145` | XSS in reply email — `message.body` inserted into HTML without `escape()`. |
 | 4 | Frontend Security | `frontend/next.config.mjs` | Missing Content-Security-Policy header. |
 | 5 | Frontend Security | `frontend/components/auth-provider.tsx:115` | Tokens stored in sessionStorage (accessible to XSS). Consider httpOnly cookies. |
-| 6 | SEO | `frontend/app/sitemap.ts` | No `/terrenos/[slug]` entries — Google cannot index listings. |
 
 ### 🟠 HIGH — Fix Soon
 
 | # | Area | File | Issue |
 |---|------|------|-------|
-| 8 | Backend Performance | `backend/apps/contacts/serializers.py:103,127` | N+1 on `messages`/`last_message` in ContactRequest list. |
 | 9 | Backend Security | `backend/apps/users/google_auth.py:22` | No throttle on Google auth endpoint. |
 | 10 | Backend Security | `backend/config/settings/production.py:13` | `SECURE_SSL_REDIRECT` defaults to False. |
-| 12 | Frontend Performance | `frontend/app/layout.tsx:38` | Google GSI script loaded on every page. Load lazily, only on `/login`. |
 | 15 | Frontend Perf | `frontend/components/site-footer.tsx` | Unnecessary `"use client"` — should be Server Component. |
 
 ### 🟡 MEDIUM — Plan to Fix
@@ -162,7 +159,11 @@ Labels calculados en serializer: `payment_facility_label` = `"Enganche desde $X"
 | 27 | Frontend Code | `frontend/lib/api.ts` | Redundant ternary producing identical paths. |
 
 > IDs eliminados del roadmap porque ya están resueltos o la premisa ya no aplica:
-> **7** (`is_favorited` se anota con `Exists` en `get_queryset`, sin N+1), **11** (índice `area_m2` existe),
+> **6** (el sitemap ahora incluye fichas `/terrenos/[slug]` con revalidate 1h),
+> **7** (`is_favorited` se anota con `Exists` en `get_queryset`, sin N+1),
+> **8** (el listado de contactos ya no serializa `messages`; `last_message` usa `Subquery`),
+> **11** (índice `area_m2` existe),
+> **12** (el script GSI de Google se carga dinámicamente solo en el botón de login),
 > **13** (debounce de 500ms en `FilterBar`), **14** (el botón de favorito no está anidado en `<Link>`),
 > **17** (`terrain_type` sí es filtro), **18** (`CheckConstraint` price/area existen desde la migración 0007),
 > **19** (no existe `import struct` en el código).

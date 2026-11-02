@@ -125,7 +125,6 @@ type ContactRequestApi = {
   notification_sent_at: string | null;
   notification_error: string;
   created_at: string;
-  messages: MessageApi[];
   last_message: { body: string; created_at: string } | null;
 };
 
@@ -370,7 +369,6 @@ function mapContactRequest(item: ContactRequestApi): ContactRequest {
     notificationSentAt: item.notification_sent_at,
     notificationError: item.notification_error,
     createdAt: item.created_at,
-    messages: item.messages?.map(mapMessage) ?? [],
     lastMessage: item.last_message
       ? { body: item.last_message.body, createdAt: item.last_message.created_at }
       : null,

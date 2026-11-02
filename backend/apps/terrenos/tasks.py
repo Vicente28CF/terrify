@@ -8,11 +8,17 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
-def flush_views_count():
-    """Flush pending views-count increments from cache to database."""
+def flush_views_count(keys=None):
+    """Flush pending views-count increments from cache to database.
+
+    En producción `keys` es None y se escanean las claves con ``cache.keys``
+    (django-redis). Los tests pueden inyectar las claves explícitas porque
+    LocMemCache no implementa ``keys()``.
+    """
     from apps.terrenos.models import Terreno
 
-    keys = cache.keys("terreno_views:*") if hasattr(cache, "keys") else []
+    if keys is None:
+        keys = cache.keys("terreno_views:*") if hasattr(cache, "keys") else []
     if not keys:
         return
 

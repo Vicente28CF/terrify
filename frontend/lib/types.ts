@@ -102,7 +102,6 @@ export type ContactRequest = {
   notificationSentAt: string | null;
   notificationError: string;
   createdAt: string;
-  messages: Message[];
   lastMessage: { body: string; createdAt: string } | null;
 };
 

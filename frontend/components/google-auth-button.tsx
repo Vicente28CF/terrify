@@ -7,6 +7,33 @@ import { useAuth } from "@/components/auth-provider";
 import { loginWithGoogle } from "@/lib/api";
 
 let initializedClientId: string | null = null;
+let gsiScriptPromise: Promise<void> | null = null;
+
+const GSI_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
+
+function loadGsiScript(): Promise<void> {
+  if (window.google?.accounts?.id) {
+    return Promise.resolve();
+  }
+
+  if (!gsiScriptPromise) {
+    gsiScriptPromise = new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = GSI_SCRIPT_SRC;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        gsiScriptPromise = null;
+        script.remove();
+        reject(new Error("No se pudo cargar Google Sign-In."));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  return gsiScriptPromise;
+}
 
 declare global {
   interface Window {
@@ -111,9 +138,23 @@ export function GoogleAuthButton() {
       };
     }
 
+    // Cargar el script de Google solo cuando el botón es visible (no en todas las páginas)
+    loadGsiScript().catch(() => {
+      if (!cancelled) {
+        setError("No se pudo cargar el inicio de sesion con Google.");
+      }
+    });
+
+    let attempts = 0;
+    const maxAttempts = 50; // ~5 segundos
+
     const retry = window.setInterval(() => {
-      if (renderGoogleButton()) {
+      attempts += 1;
+      if (renderGoogleButton() || attempts >= maxAttempts) {
         window.clearInterval(retry);
+        if (attempts >= maxAttempts && !cancelled && !window.google) {
+          setError("No se pudo cargar el inicio de sesion con Google.");
+        }
       }
     }, 100);
 

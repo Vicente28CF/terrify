@@ -52,6 +52,7 @@ class TerrenoListSerializer(serializers.ModelSerializer):
             "nearby_services",
             "latitude",
             "longitude",
+            "updated_at",
         )
 
     def get_image(self, obj):

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Script from "next/script";
 
 import { AuthProvider } from "@/components/auth-provider";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -37,10 +36,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <Script
-          src="https://accounts.google.com/gsi/client"
-          strategy="afterInteractive"
-        />
         <AuthProvider>
           <QueryProvider>
             <NuqsProvider>

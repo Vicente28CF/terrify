@@ -11,6 +11,7 @@ from apps.users.models import User
 
 from ..models import Terreno, TerrenoImage
 from ..services import TerrainImageServiceError
+from ..tasks import flush_views_count
 
 
 TEST_CACHES = {
@@ -73,6 +74,11 @@ class TerrenoApiTests(APITestCase):
         response = self.client.get(reverse("terrenos-detail", kwargs={"slug": self.active_terreno.slug}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # El incremento se muestra de inmediato en la respuesta (buffer en caché)
+        self.assertEqual(response.data["views_count"], 1)
+
+        # ...y se persiste en BD al ejecutar la tarea de flush (beat cada 5 min)
+        flush_views_count(keys=[f"terreno_views:{self.active_terreno.pk}"])
         self.active_terreno.refresh_from_db()
         self.assertEqual(self.active_terreno.views_count, 1)
 
