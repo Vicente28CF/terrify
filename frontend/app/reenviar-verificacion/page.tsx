@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { getApiBaseUrl } from "@/lib/api";
 
-export default function ReenviarVerificacionPage() {
+function ReenviarVerificacionContent() {
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email") ?? "";
   const [status, setStatus] = useState<"idle" | "loading" | "sent" | "error">("idle");
@@ -37,7 +37,7 @@ export default function ReenviarVerificacionPage() {
         </p>
 
         {status === "sent" ? (
-          <div className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div className="mt-6 rounded-2xl bg-success/15 px-4 py-3 text-sm text-success">
             Si el email existe, recibiras un nuevo enlace en unos minutos.
           </div>
         ) : (
@@ -45,7 +45,7 @@ export default function ReenviarVerificacionPage() {
             type="button"
             onClick={handleResend}
             disabled={status === "loading"}
-            className="mt-6 w-full rounded-2xl bg-coral py-3.5 text-sm font-bold text-white transition hover:bg-[#e92a5b] disabled:opacity-60"
+            className="mt-6 w-full rounded-2xl bg-cta py-3.5 text-sm font-bold text-text transition hover:bg-cta-dark disabled:opacity-40"
           >
             {status === "loading" ? "Enviando..." : "Reenviar enlace"}
           </button>
@@ -57,11 +57,25 @@ export default function ReenviarVerificacionPage() {
 
         <Link
           href="/login"
-          className="mt-4 block text-xs text-stone/60 transition hover:text-coral"
+          className="mt-4 block text-xs text-stone/60 transition hover:text-cta"
         >
           Volver al login
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function ReenviarVerificacionPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-sand px-4">
+          <div className="text-sm text-stone">Cargando...</div>
+        </main>
+      }
+    >
+      <ReenviarVerificacionContent />
+    </Suspense>
   );
 }

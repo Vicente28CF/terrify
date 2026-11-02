@@ -139,10 +139,10 @@ def send_reply_notification(contact_request, message) -> None:
         "subject": f"Nueva respuesta en Terrify — {contact_request.terreno.title}",
         "html": f"""
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-            <h2 style="color: #1f1f1f;">{sender_label} te respondió 💬</h2>
-            <p style="color: #6a6a6a;">Sobre el terreno: <strong>{contact_request.terreno.title}</strong></p>
+            <h2 style="color: #1f1f1f;">{escape(sender_label)} te respondió 💬</h2>
+            <p style="color: #6a6a6a;">Sobre el terreno: <strong>{escape(contact_request.terreno.title)}</strong></p>
             <div style="background: #f5f5f3; padding: 16px; border-radius: 12px; margin: 16px 0;">
-                <p style="color: #1f1f1f; margin: 0;">"{message.body[:200]}..."</p>
+                <p style="color: #1f1f1f; margin: 0;">"{escape(message.body[:200])}..."</p>
             </div>
             <a href="{frontend_url}/mensajes/{contact_request.id}"
                style="display: inline-block; margin-top: 16px; padding: 12px 24px;

@@ -15,9 +15,9 @@ export default async function RegistroExitosoPage({
       <SiteHeader />
       <div className="flex min-h-[80vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-3xl border border-white/60 bg-white p-10 text-center shadow-lg">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-success/15">
             <svg
-              className="h-8 w-8 text-emerald-500"
+              className="h-8 w-8 text-success"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -48,7 +48,7 @@ export default async function RegistroExitosoPage({
           <div className="mt-8 space-y-3">
             <Link
               href="/login"
-              className="block w-full rounded-2xl bg-coral py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-[#e92a5b]"
+              className="block w-full rounded-2xl bg-cta py-3.5 text-sm font-bold text-text shadow-md transition hover:bg-cta-dark"
             >
               Ir al inicio de sesion
             </Link>
@@ -64,7 +64,7 @@ export default async function RegistroExitosoPage({
             ¿No recibiste nada?{" "}
             <Link
               href={`/reenviar-verificacion?email=${encodeURIComponent(safeEmail)}`}
-              className="font-medium text-coral hover:underline"
+              className="font-medium text-cta hover:underline"
             >
               Reenviar enlace
             </Link>

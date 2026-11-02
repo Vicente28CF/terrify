@@ -9,8 +9,8 @@ from rest_framework.test import APITestCase
 
 from apps.users.models import User
 
-from .models import Terreno, TerrenoImage
-from .services import TerrainImageServiceError
+from ..models import Terreno, TerrenoImage
+from ..services import TerrainImageServiceError
 
 
 TEST_CACHES = {
@@ -95,6 +95,88 @@ class TerrenoApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Terreno.objects.filter(title="Terreno Nuevo", user=self.owner).exists())
+
+    def test_owner_can_create_terreno_with_terrain_attributes(self):
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.post(
+            reverse("terrenos-list"),
+            {
+                "title": "Lote con servicios",
+                "description": "Descripcion completa de un lote con servicios para venta.",
+                "price": "1200000.00",
+                "area_m2": "210.00",
+                "municipio": "Tlaquepaque",
+                "estado": "Jalisco",
+                "status": "active",
+                "land_use": "residential",
+                "property_type": "titled",
+                "has_water": True,
+                "has_electricity": True,
+                "has_drainage": True,
+                "has_paved_road": True,
+                "accepts_financing": True,
+                "down_payment_amount": "80000.00",
+                "area_unit": "m2",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        terreno = Terreno.objects.get(title="Lote con servicios")
+        self.assertEqual(terreno.land_use, Terreno.LandUse.RESIDENTIAL)
+        self.assertEqual(terreno.property_type, Terreno.PropertyType.TITLED)
+        self.assertTrue(terreno.has_water)
+        self.assertTrue(terreno.has_electricity)
+        self.assertTrue(terreno.has_drainage)
+        self.assertTrue(terreno.has_paved_road)
+        self.assertTrue(terreno.accepts_financing)
+        self.assertEqual(terreno.down_payment_amount, Decimal("80000.00"))
+        self.assertEqual(response.data["payment_facility_label"], "Enganche desde $80,000")
+
+    def test_create_terreno_rejects_invalid_land_use(self):
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.post(
+            reverse("terrenos-list"),
+            {
+                "title": "Uso de suelo invalido",
+                "description": "Descripcion completa de un terreno con uso de suelo invalido.",
+                "price": "900000.00",
+                "area_m2": "180.00",
+                "municipio": "Tlaquepaque",
+                "estado": "Jalisco",
+                "status": "active",
+                "land_use": "mineria",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_can_update_terrain_attributes(self):
+        self.client.force_authenticate(self.owner)
+
+        response = self.client.patch(
+            reverse("terrenos-detail", kwargs={"slug": self.active_terreno.slug}),
+            {
+                "land_use": "commercial",
+                "property_type": "ejido",
+                "has_paved_road": True,
+                "accepts_financing": True,
+                "down_payment_amount": "50000.00",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.active_terreno.refresh_from_db()
+        self.assertEqual(self.active_terreno.land_use, Terreno.LandUse.COMMERCIAL)
+        self.assertEqual(self.active_terreno.property_type, Terreno.PropertyType.EJIDO)
+        self.assertTrue(self.active_terreno.has_paved_road)
+        self.assertTrue(self.active_terreno.accepts_financing)
+        self.assertEqual(self.active_terreno.down_payment_amount, Decimal("50000.00"))
+        self.assertEqual(response.data["payment_facility_label"], "Enganche desde $50,000")
 
     def test_create_terreno_respects_publish_limit(self):
         limited_user = User.objects.create_user(

@@ -16,6 +16,29 @@ const config: Config = {
         "dash-success": "#0f9172",
         "dash-warning": "#f59e0b",
         "dash-error": "#dc2626",
+        // Paleta de marca Terrify
+        primary: {
+          DEFAULT: "#7A3B24",
+          dark: "#5C2C1B",
+        },
+        secondary: {
+          DEFAULT: "#3F5940",
+        },
+        cta: {
+          DEFAULT: "#D19A3D",
+          dark: "#A87427",
+        },
+        success: "#4A7C4E",
+        warning: "#C08A3E",
+        danger: "#A83E2E",
+        background: {
+          DEFAULT: "#F3EEE4",
+          alt: "#E8E1D3",
+        },
+        text: {
+          DEFAULT: "#2B241E",
+          muted: "#6B6355",
+        },
       },
       boxShadow: {
         panel: "0 12px 40px rgba(15, 23, 42, 0.08)",

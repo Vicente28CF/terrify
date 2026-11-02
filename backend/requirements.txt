@@ -1,6 +1,7 @@
 # ─── Core ────────────────────────────────────────────────────────
 Django==4.2.20
 djangorestframework==3.15.1
+gunicorn==21.2.0
 
 # ─── Base de datos ───────────────────────────────────────────────
 psycopg2-binary==2.9.9
@@ -21,19 +22,22 @@ requests==2.31.0
 # ─── Caché con Redis ─────────────────────────────────────────────
 django-redis==5.4.0
 
-# ─── Rate limiting ───────────────────────────────────────────────
-django-ratelimit==4.1.0
+# ─── Celery (tareas asíncronas) ──────────────────────────────────
+celery==5.4.0
+django-celery-beat==2.7.0
 
 # ─── Imágenes con Cloudinary ─────────────────────────────────────
 cloudinary==1.40.0
 google-auth==2.29.0
-google-auth-httplib2==0.2.0
 
 # ─── Emails ──────────────────────────────────────────────────────
 resend==2.3.0
 
 # ─── Seguridad ───────────────────────────────────────────────────
 django-csp==3.8
+
+# ─── Servir archivos estáticos ──────────────────────────────────
+whitenoise==6.6.0
 
 # ─── Escaneo de vulnerabilidades (CI) ────────────────────────────
 pip-audit==2.7.3

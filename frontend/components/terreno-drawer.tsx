@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -12,7 +13,15 @@ import {
   fetchOwnedTerrenoBySlug,
   updateTerreno,
 } from "@/lib/api";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { MUNICIPIOS_JALISCO } from "@/lib/municipios-jalisco";
+import {
+  LAND_USE_VALUES,
+  PROPERTY_TYPE_VALUES,
+  TERRAIN_TYPE_VALUES,
+  NEARBY_SERVICE_VALUES,
+  TERRAIN_SERVICE_TOGGLES,
+} from "@/lib/terreno-options";
 import type {
   Terreno,
   TerrenoImage,
@@ -20,27 +29,26 @@ import type {
   UpdateTerrenoPayload,
 } from "@/lib/types";
 
-const NEARBY_SERVICES = [
-  { id: "tienda", label: "Tienda", emoji: "🛒" },
-  { id: "farmacia", label: "Farmacia", emoji: "💊" },
-  { id: "escuela", label: "Escuela", emoji: "🏫" },
-  { id: "iglesia", label: "Iglesia", emoji: "⛪" },
-  { id: "transporte", label: "Transporte", emoji: "🚌" },
-  { id: "agua", label: "Agua potable", emoji: "💧" },
-  { id: "luz", label: "Electricidad", emoji: "⚡" },
-  { id: "drenaje", label: "Drenaje", emoji: "🔧" },
-  { id: "internet", label: "Internet", emoji: "📶" },
-  { id: "banco", label: "Banco/Cajero", emoji: "🏦" },
-  { id: "hospital", label: "Hospital/Clínica", emoji: "🏥" },
-  { id: "mercado", label: "Mercado", emoji: "🏪" },
-];
+// Estos valores deben coincidir exactamente con los de los filtros de busqueda
+// (frontend/lib/terreno-options.ts) para que lo publicado sea encontrable.
+const NEARBY_SERVICE_EMOJI: Record<string, string> = {
+  Agua: "💧",
+  Luz: "⚡",
+  Gas: "🔥",
+  Drenaje: "🔧",
+  Pavimento: "🛣️",
+  Internet: "📶",
+  Seguridad: "🛡️",
+  "Transporte público": "🚌",
+};
 
-const TERRENO_TYPES = [
-  { id: "habitacional", label: "Habitacional", emoji: "🏡", desc: "Para construir casa" },
-  { id: "comercial", label: "Comercial", emoji: "🏪", desc: "Para negocio o local" },
-  { id: "agricola", label: "Agrícola", emoji: "🌾", desc: "Para cultivo o rancho" },
-  { id: "mixto", label: "Mixto", emoji: "🏘️", desc: "Uso combinado" },
-];
+const TERRAIN_TYPE_EMOJI: Record<string, string> = {
+  residencial: "🏡",
+  comercial: "🏪",
+  industrial: "🏭",
+  rural: "🌾",
+  urbano: "🏙️",
+};
 
 const STEPS_CREATE = [
   { id: "fotos", emoji: "📸", label: "Fotos", title: "Agrega fotos de tu terreno", subtitle: "Las fotos generan más interés. Sube de 1 a 10 imágenes." },
@@ -52,6 +60,7 @@ const STEPS_CREATE = [
 const STEPS_EDIT = [
   { id: "informacion", emoji: "📋", label: "Info", title: "Información del terreno", subtitle: "Edita los datos principales." },
   { id: "ubicacion", emoji: "🗺️", label: "Ubicación", title: "Ubicación y descripción", subtitle: "Edita la ubicación y detalles." },
+  { id: "extras", emoji: "✨", label: "Extras", title: "Añade más valor a tu terreno", subtitle: "Los servicios cercanos aumentan el interés." },
   { id: "galeria", emoji: "📸", label: "Fotos", title: "Gestiona las fotos", subtitle: "Administra las imágenes de tu terreno." },
 ];
 
@@ -84,7 +93,7 @@ function MunicipioCombobox({
         onFocus={() => setIsOpen(true)}
         onBlur={() => setTimeout(() => setIsOpen(false), 150)}
         placeholder="Ej. Zacoalco de Torres"
-        className="w-full rounded-2xl border border-line/80 bg-white px-4 py-3 text-sm font-medium text-ink placeholder-stone/40 outline-none transition focus:border-coral/50 min-h-[52px]"
+        className="w-full rounded-2xl border border-line/80 bg-white px-4 py-3 text-sm font-medium text-ink placeholder-stone/40 outline-none transition focus:border-cta/50 min-h-[52px]"
       />
       {isOpen && filtered.length > 0 && (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-2xl border border-line/60 bg-white shadow-xl">
@@ -99,7 +108,7 @@ function MunicipioCombobox({
               }}
               className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-ink hover:bg-sand transition"
             >
-              <svg className="h-4 w-4 flex-shrink-0 text-coral" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 flex-shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
               </svg>
               {municipio}
@@ -116,6 +125,7 @@ type TerrainFormValue = {
   description: string;
   price: string;
   areaM2: string;
+  areaUnit: "m2" | "hectare";
   municipio: string;
   estado: string;
   address: string;
@@ -124,6 +134,14 @@ type TerrainFormValue = {
   status: "active" | "paused" | "sold";
   nearbyServices: string[];
   terrenoType: string;
+  landUse: string;
+  propertyType: string;
+  hasWater: boolean;
+  hasElectricity: boolean;
+  hasDrainage: boolean;
+  hasPavedRoad: boolean;
+  acceptsFinancing: boolean;
+  downPaymentAmount: string;
 };
 
 type PendingUploadImage = {
@@ -147,6 +165,7 @@ const EMPTY_FORM: TerrainFormValue = {
   description: "",
   price: "",
   areaM2: "",
+  areaUnit: "m2",
   municipio: "",
   estado: "Jalisco",
   address: "",
@@ -155,6 +174,14 @@ const EMPTY_FORM: TerrainFormValue = {
   status: "active",
   nearbyServices: [],
   terrenoType: "",
+  landUse: "",
+  propertyType: "",
+  hasWater: false,
+  hasElectricity: false,
+  hasDrainage: false,
+  hasPavedRoad: false,
+  acceptsFinancing: false,
+  downPaymentAmount: "",
 };
 
 export function TerrenoDrawer({
@@ -177,6 +204,8 @@ export function TerrenoDrawer({
   const [isDirty, setIsDirty] = useState(false);
   const [priceDisplay, setPriceDisplay] = useState("");
   const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "found" | "not_found">("idle");
+  const [confirmState, setConfirmState] = useState<"delete-image" | "close-dirty" | null>(null);
+  const [pendingImageId, setPendingImageId] = useState<string | null>(null);
   const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const steps = mode === "create" ? STEPS_CREATE : STEPS_EDIT;
@@ -204,6 +233,7 @@ export function TerrenoDrawer({
           description: terreno.description,
           price: String(terreno.price),
           areaM2: String(terreno.areaM2),
+          areaUnit: terreno.areaUnit ?? "m2",
           municipio: terreno.municipio,
           estado: terreno.estado,
           address: terreno.address,
@@ -212,6 +242,15 @@ export function TerrenoDrawer({
           status: terreno.status,
           nearbyServices: terreno.nearbyServices ?? [],
           terrenoType: terreno.terrainType ?? "",
+          landUse: terreno.landUse ?? "",
+          propertyType: terreno.propertyType ?? "",
+          hasWater: terreno.hasWater ?? false,
+          hasElectricity: terreno.hasElectricity ?? false,
+          hasDrainage: terreno.hasDrainage ?? false,
+          hasPavedRoad: terreno.hasPavedRoad ?? false,
+          acceptsFinancing: terreno.acceptsFinancing ?? false,
+          downPaymentAmount:
+            terreno.downPaymentAmount != null ? String(terreno.downPaymentAmount) : "",
         });
         setTerrainImages(terreno.images);
         setSelectedFiles([]);
@@ -229,15 +268,20 @@ export function TerrenoDrawer({
     }
   }, [isOpen, auth, terrenoSlug, mode]);
 
+  const selectedFilesRef = useRef(selectedFiles);
+  useEffect(() => {
+    selectedFilesRef.current = selectedFiles;
+  }, [selectedFiles]);
+
   useEffect(() => {
     return () => {
-      selectedFiles.forEach((file) => {
+      selectedFilesRef.current.forEach((file) => {
         URL.revokeObjectURL(file.previewUrl);
       });
     };
   }, []);
 
-  function handleFormChange(field: keyof TerrainFormValue, value: string | string[]) {
+  function handleFormChange<K extends keyof TerrainFormValue>(field: K, value: TerrainFormValue[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setIsDirty(true);
   }
@@ -376,19 +420,27 @@ export function TerrenoDrawer({
       return;
     }
 
-    if (!window.confirm("Eliminar esta imagen?")) return;
+    setPendingImageId(imageId);
+    setConfirmState("delete-image");
+  }
 
+  function confirmDeleteImage() {
+    if (!auth || !terrenoSlug || !pendingImageId) return;
+    setConfirmState(null);
     setIsManagingImages(true);
-    try {
-      const terreno = await deleteTerrenoImage(terrenoSlug, imageId, auth);
-      setTerrainImages(terreno.images);
-      onSave(terreno);
-      onNotify("success", "Imagen eliminada.");
-    } catch (err) {
-      onNotify("error", err instanceof Error ? err.message : "No se pudo eliminar la imagen.");
-    } finally {
-      setIsManagingImages(false);
-    }
+    void deleteTerrenoImage(terrenoSlug, pendingImageId, auth)
+      .then((terreno) => {
+        setTerrainImages(terreno.images);
+        onSave(terreno);
+        onNotify("success", "Imagen eliminada.");
+      })
+      .catch((err) => {
+        onNotify("error", err instanceof Error ? err.message : "No se pudo eliminar la imagen.");
+      })
+      .finally(() => {
+        setIsManagingImages(false);
+        setPendingImageId(null);
+      });
   }
 
   async function handleSaveImages() {
@@ -472,6 +524,16 @@ export function TerrenoDrawer({
       longitude: form.longitude ? Number(form.longitude) : null,
       nearbyServices: form.nearbyServices,
       terrainType: form.terrenoType,
+      areaUnit: form.areaUnit,
+      landUse: form.landUse,
+      propertyType: form.propertyType,
+      hasWater: form.hasWater,
+      hasElectricity: form.hasElectricity,
+      hasDrainage: form.hasDrainage,
+      hasPavedRoad: form.hasPavedRoad,
+      acceptsFinancing: form.acceptsFinancing,
+      downPaymentAmount:
+        form.acceptsFinancing && form.downPaymentAmount ? Number(form.downPaymentAmount) : null,
     };
 
     setIsSaving(true);
@@ -515,9 +577,21 @@ export function TerrenoDrawer({
   }
 
   function handleClose() {
-    if (isDirty && !window.confirm("Tienes cambios sin guardar. ¿Cerrar de todos modos?")) {
+    if (isDirty) {
+      setConfirmState("close-dirty");
       return;
     }
+    setForm(EMPTY_FORM);
+    setTerrainImages([]);
+    setSelectedFiles([]);
+    setStepError(null);
+    setIsDirty(false);
+    setCurrentStep(0);
+    onClose();
+  }
+
+  function confirmCloseDirty() {
+    setConfirmState(null);
     setForm(EMPTY_FORM);
     setTerrainImages([]);
     setSelectedFiles([]);
@@ -574,11 +648,11 @@ export function TerrenoDrawer({
           {mode === "edit" && terrainImages.length > 0 && (
             <div className="grid gap-3 sm:grid-cols-2">
               {terrainImages.map((image, index) => (
-                <div key={image.id} className="overflow-hidden rounded-2xl border border-line/80 bg-white">
+                  <div key={image.id} className="overflow-hidden rounded-2xl border border-line/80 bg-white">
                   <div className="relative aspect-[4/3] bg-sand">
-                    <img src={image.imageUrl} alt={`Imagen ${index + 1}`} className="h-full w-full object-cover" />
+                    <Image src={image.imageUrl} alt={`Imagen ${index + 1}`} fill sizes="(max-width: 640px) 100vw, 50vw" className="object-cover" />
                     {image.isCover && (
-                      <span className="absolute left-2 top-2 rounded-full bg-coral px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                      <span className="absolute left-2 top-2 rounded-full bg-cta px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
                         Portada
                       </span>
                     )}
@@ -625,7 +699,7 @@ export function TerrenoDrawer({
           )}
         </div>
 
-        <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line/60 bg-sand/50 px-6 py-8 text-center transition hover:border-coral/40 hover:bg-sand">
+        <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-line/60 bg-sand/50 px-6 py-8 text-center transition hover:border-cta/40 hover:bg-sand">
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -649,14 +723,14 @@ export function TerrenoDrawer({
             </p>
             {selectedFiles.map((item, index) => (
               <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-line/80 bg-white p-3">
-                <div className="h-14 w-14 overflow-hidden rounded-xl bg-sand">
-                  <img src={item.previewUrl} alt={item.file.name} className="h-full w-full object-cover" />
+                <div className="relative h-14 w-14 overflow-hidden rounded-xl bg-sand">
+                  <Image src={item.previewUrl} alt={item.file.name} fill unoptimized className="object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink">
                     {item.file.name}
                     {index === 0 && terrainImages.length === 0 && (
-                      <span className="ml-2 text-coral">(portada)</span>
+                      <span className="ml-2 text-cta">(portada)</span>
                     )}
                   </p>
                   <p className="text-xs text-stone">{(item.file.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -706,7 +780,7 @@ export function TerrenoDrawer({
               value={form.title}
               onChange={(e) => handleFormChange("title", e.target.value)}
               placeholder="Ej. Terreno en esquina, zona residencial"
-              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
               required
             />
           </label>
@@ -722,7 +796,7 @@ export function TerrenoDrawer({
                   value={priceDisplay}
                   onChange={(e) => handlePriceChange(e.target.value)}
                   placeholder="1,250,000"
-                  className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white py-3 pl-8 pr-4 text-base font-semibold text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+                  className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white py-3 pl-8 pr-4 text-base font-semibold text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
                   required
                 />
               </div>
@@ -740,7 +814,7 @@ export function TerrenoDrawer({
                 value={form.areaM2}
                 onChange={(e) => handleFormChange("areaM2", e.target.value)}
                 placeholder="250"
-                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
                 required
                 min="1"
               />
@@ -774,7 +848,7 @@ export function TerrenoDrawer({
               value={form.estado}
               onChange={(e) => handleFormChange("estado", e.target.value)}
               placeholder="Jalisco"
-              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
             />
           </label>
 
@@ -786,7 +860,7 @@ export function TerrenoDrawer({
                 value={form.address}
                 onChange={(e) => handleAddressChange(e.target.value)}
                 placeholder="Ej. Calle Hidalgo 45, Col. Centro"
-                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 pr-10 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 pr-10 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
                 {geoStatus === "loading" && (
@@ -822,7 +896,7 @@ export function TerrenoDrawer({
               value={form.description}
               onChange={(e) => handleFormChange("description", e.target.value)}
               placeholder="Describe la ubicación, oportunidades, uso recomendado..."
-              className="w-full resize-none rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+              className="w-full resize-none rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
             />
           </label>
         </div>
@@ -838,20 +912,103 @@ export function TerrenoDrawer({
             <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone">Tipo de terreno</span>
           </label>
           <div className="grid grid-cols-2 gap-3">
-            {TERRENO_TYPES.map((type) => (
+            {TERRAIN_TYPE_VALUES.map((type) => (
               <button
-                key={type.id}
+                key={type.value}
                 type="button"
-                onClick={() => handleFormChange("terrenoType", type.id)}
+                onClick={() => handleFormChange("terrenoType", type.value)}
                 className={`flex flex-col items-start rounded-2xl border p-4 text-left transition-all ${
-                  form.terrenoType === type.id
-                    ? "border-coral bg-coral/5 shadow-md"
-                    : "border-line/60 bg-white hover:border-coral/30"
+                  form.terrenoType === type.value
+                    ? "border-cta bg-cta/5 shadow-md"
+                    : "border-line/60 bg-white hover:border-cta/30"
                 }`}
               >
-                <span className="text-2xl">{type.emoji}</span>
+                <span className="text-2xl">{TERRAIN_TYPE_EMOJI[type.value] ?? "📍"}</span>
                 <span className="mt-2 font-semibold text-ink">{type.label}</span>
-                <span className="text-xs text-stone">{type.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone">Uso de suelo</span>
+            <span className="block text-xs text-stone">Ayuda a que aparezca en la búsqueda correcta</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {LAND_USE_VALUES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  handleFormChange("landUse", form.landUse === option.value ? "" : option.value)
+                }
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                  form.landUse === option.value
+                    ? "bg-primary text-white shadow-sm"
+                    : "border border-line/60 bg-white text-stone hover:border-primary/30 hover:text-ink"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone">Tipo de propiedad</span>
+            <span className="block text-xs text-stone">Estado de la documentación/escritura</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {PROPERTY_TYPE_VALUES.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  handleFormChange("propertyType", form.propertyType === option.value ? "" : option.value)
+                }
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+                  form.propertyType === option.value
+                    ? "bg-primary text-white shadow-sm"
+                    : "border border-line/60 bg-white text-stone hover:border-primary/30 hover:text-ink"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone">Servicios del terreno</span>
+            <span className="block text-xs text-stone">Lo que ya tiene el terreno en sitio</span>
+          </label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {TERRAIN_SERVICE_TOGGLES.map((service) => (
+              <button
+                key={service.key}
+                type="button"
+                onClick={() => handleFormChange(service.key, !form[service.key])}
+                className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition-all ${
+                  form[service.key]
+                    ? "border-cta bg-cta/10 text-ink"
+                    : "border-line/60 bg-white text-stone hover:border-ink/30 hover:text-ink"
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border ${
+                    form[service.key] ? "border-cta bg-cta text-white" : "border-line bg-white"
+                  }`}
+                >
+                  {form[service.key] && (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                {service.label}
               </button>
             ))}
           </div>
@@ -863,19 +1020,77 @@ export function TerrenoDrawer({
             <span className="block text-xs text-stone">Selecciona los que están cerca</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            {NEARBY_SERVICES.map((service) => (
+            {NEARBY_SERVICE_VALUES.map((service) => (
               <button
-                key={service.id}
+                key={service.value}
                 type="button"
-                onClick={() => toggleNearbyService(service.id)}
+                onClick={() => toggleNearbyService(service.value)}
                 className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                  form.nearbyServices.includes(service.id)
-                    ? "bg-coral text-white shadow-md scale-[1.02]"
-                    : "bg-white border border-line/60 text-stone hover:border-coral/40 hover:text-ink"
+                  form.nearbyServices.includes(service.value)
+                    ? "bg-cta text-text shadow-md scale-[1.02]"
+                    : "bg-white border border-line/60 text-stone hover:border-cta/40 hover:text-ink"
                 }`}
               >
-                <span>{service.emoji}</span>
+                <span>{NEARBY_SERVICE_EMOJI[service.value] ?? "📍"}</span>
                 {service.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="flex items-center justify-between rounded-2xl border border-line/60 bg-white px-4 py-3">
+            <span className="text-sm font-semibold text-ink">Acepta facilidades de pago</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.acceptsFinancing}
+              onClick={() => handleFormChange("acceptsFinancing", !form.acceptsFinancing)}
+              className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                form.acceptsFinancing ? "bg-cta" : "bg-line/60"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  form.acceptsFinancing ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </label>
+
+          {form.acceptsFinancing && (
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone">Enganche mínimo (MXN)</span>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-stone">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={form.downPaymentAmount}
+                  onChange={(e) => handleFormChange("downPaymentAmount", e.target.value)}
+                  placeholder="50,000"
+                  className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white py-3 pl-8 pr-4 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
+                />
+              </div>
+            </label>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone">Mostrar superficie en</span>
+          </label>
+          <div className="inline-flex items-center gap-1 rounded-full border border-line/60 bg-sand/50 p-0.5">
+            {(["m2", "hectare"] as const).map((unit) => (
+              <button
+                key={unit}
+                type="button"
+                onClick={() => handleFormChange("areaUnit", unit)}
+                className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
+                  form.areaUnit === unit ? "bg-ink text-white" : "text-stone hover:text-ink"
+                }`}
+              >
+                {unit === "m2" ? "m²" : "hectáreas"}
               </button>
             ))}
           </div>
@@ -886,7 +1101,7 @@ export function TerrenoDrawer({
           <select
             value={form.status}
             onChange={(e) => handleFormChange("status", e.target.value as TerrainFormValue["status"])}
-            className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink outline-none transition focus:border-coral/50"
+            className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink outline-none transition focus:border-cta/50"
           >
             <option value="active">Activo - Visible para todos</option>
             <option value="paused">Pausado - Temporalmente oculto</option>
@@ -894,7 +1109,7 @@ export function TerrenoDrawer({
         </label>
 
         <div className="rounded-2xl bg-sand px-4 py-3 text-sm text-stone">
-          💡 <strong>Tip:</strong> Los terrenos con servicios marcados aparecen primero en las búsquedas.
+          💡 <strong>Tip:</strong> Los terrenos con más datos y servicios marcados aparecen primero en las búsquedas.
         </div>
       </div>
     );
@@ -915,7 +1130,7 @@ export function TerrenoDrawer({
               value={form.title}
               onChange={(e) => handleFormChange("title", e.target.value)}
               placeholder="Ej. Terreno en esquina, zona residencial"
-              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
               required
             />
           </label>
@@ -931,7 +1146,7 @@ export function TerrenoDrawer({
                   value={priceDisplay}
                   onChange={(e) => handlePriceChange(e.target.value)}
                   placeholder="1,250,000"
-                  className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white py-3 pl-8 pr-4 text-base font-semibold text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+                  className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white py-3 pl-8 pr-4 text-base font-semibold text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
                   required
                 />
               </div>
@@ -949,7 +1164,7 @@ export function TerrenoDrawer({
                 value={form.areaM2}
                 onChange={(e) => handleFormChange("areaM2", e.target.value)}
                 placeholder="250"
-                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
                 required
                 min="1"
               />
@@ -972,7 +1187,7 @@ export function TerrenoDrawer({
                 value={form.estado}
                 onChange={(e) => handleFormChange("estado", e.target.value)}
                 placeholder="Jalisco"
-                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-coral/50"
+                className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink placeholder-stone/40 outline-none transition focus:border-cta/50"
               />
             </label>
           </div>
@@ -982,7 +1197,7 @@ export function TerrenoDrawer({
             <select
               value={form.status}
               onChange={(e) => handleFormChange("status", e.target.value as TerrainFormValue["status"])}
-              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink outline-none transition focus:border-coral/50"
+              className="w-full min-h-[52px] rounded-2xl border border-line/80 bg-white px-4 py-3 text-base text-ink outline-none transition focus:border-cta/50"
             >
               <option value="active">Activo - Visible para todos</option>
               <option value="paused">Pausado - Temporalmente oculto</option>
@@ -1004,6 +1219,23 @@ export function TerrenoDrawer({
       <div className="fixed inset-0 z-40 bg-ink/50 backdrop-blur-sm" onClick={handleClose} />
 
       <div className="fixed right-0 top-0 bottom-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-2xl">
+        <ConfirmDialog
+          isOpen={confirmState === "delete-image"}
+          title="Eliminar imagen"
+          message="¿Estás seguro de que quieres eliminar esta imagen?"
+          confirmLabel="Eliminar"
+          variant="danger"
+          onConfirm={confirmDeleteImage}
+          onCancel={() => { setConfirmState(null); setPendingImageId(null); }}
+        />
+        <ConfirmDialog
+          isOpen={confirmState === "close-dirty"}
+          title="Cambios sin guardar"
+          message="Tienes cambios sin guardar. ¿Cerrar de todos modos?"
+          confirmLabel="Cerrar"
+          onConfirm={confirmCloseDirty}
+          onCancel={() => setConfirmState(null)}
+        />
         <div className="flex items-center justify-between border-b border-line/70 px-6 py-4">
           <div>
             <h2 className="text-xl font-semibold text-ink">
@@ -1028,12 +1260,12 @@ export function TerrenoDrawer({
           {steps.map((step, index) => (
             <div key={step.id} className="flex flex-1 flex-col items-center gap-1">
               <div className={`h-1.5 w-full rounded-full transition-all duration-300 ${
-                index < currentStep ? "bg-coral" :
-                index === currentStep ? "bg-coral/60" :
+                index < currentStep ? "bg-cta" :
+                index === currentStep ? "bg-cta/60" :
                 "bg-line/40"
               }`} />
               <span className={`text-[10px] font-semibold hidden sm:block ${
-                index === currentStep ? "text-coral" : "text-stone/60"
+                index === currentStep ? "text-cta" : "text-stone/60"
               }`}>
                 {step.label}
               </span>
@@ -1054,7 +1286,7 @@ export function TerrenoDrawer({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-sand border-t-coral" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-background border-t-cta" />
             </div>
           ) : (
             <>
@@ -1093,7 +1325,7 @@ export function TerrenoDrawer({
                 type="button"
                 onClick={handleSubmit}
                 disabled={isSaving}
-                className="flex-1 rounded-2xl bg-coral px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(255,56,92,0.3)] transition hover:-translate-y-0.5 hover:bg-[#e92a5b] disabled:opacity-60"
+                className="flex-1 rounded-2xl bg-cta px-5 py-3 text-sm font-bold text-text shadow-[0_4px_14px_rgba(209,154,61,0.3)] transition hover:-translate-y-0.5 hover:bg-cta-dark disabled:opacity-40"
               >
                 {isSaving ? "Publicando..." : mode === "edit" ? "Guardar cambios" : "🚀 Publicar terreno"}
               </button>

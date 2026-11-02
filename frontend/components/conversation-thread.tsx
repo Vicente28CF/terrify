@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 import { fetchMessages, sendMessage, markConversationAsRead } from "@/lib/api";
 import type { Message } from "@/lib/types";
 
-export function ConversationThread({ contactId }: { contactId: string }) {
+export function ConversationThread({ contactId, showBackButton = false }: { contactId: string; showBackButton?: boolean }) {
   const { auth } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -27,8 +28,13 @@ export function ConversationThread({ contactId }: { contactId: string }) {
   useEffect(() => {
     if (!auth) return;
     fetchMessages(contactId, auth)
-      .then(setMessages)
-      .catch(() => setError("No se pudieron cargar los mensajes."));
+      .then((msgs) => {
+        const unique = Array.from(new Map(msgs.map((m) => [m.id, m])).values());
+        setMessages(unique);
+      })
+      .catch(() => {
+        setError("No se pudieron cargar los mensajes.");
+      });
   }, [contactId, auth]);
 
   // Polling cada 5 segundos — merge sin duplicados
@@ -38,9 +44,10 @@ export function ConversationThread({ contactId }: { contactId: string }) {
       fetchMessages(contactId, auth)
         .then((newMessages) => {
           setMessages((prev) => {
-            const merged = new Map(prev.map((m) => [m.id, m]));
-            newMessages.forEach((m) => merged.set(m.id, m));
-            return Array.from(merged.values()).sort(
+            const uniquePrev = new Map(prev.map((m) => [m.id, m]));
+            newMessages.forEach((m) => uniquePrev.set(m.id, m));
+            const uniqueMessages = Array.from(uniquePrev.values());
+            return uniqueMessages.sort(
               (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             );
           });
@@ -50,9 +57,13 @@ export function ConversationThread({ contactId }: { contactId: string }) {
     return () => clearInterval(interval);
   }, [contactId, auth]);
 
-  // Scroll al último mensaje
+  // Scroll al último mensaje solo cuando se envía nuevo mensaje
+  const lastMessageCountRef = useRef(0);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > lastMessageCountRef.current && lastMessageCountRef.current > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    lastMessageCountRef.current = messages.length;
   }, [messages]);
 
   async function handleSend() {
@@ -72,6 +83,18 @@ export function ConversationThread({ contactId }: { contactId: string }) {
 
   return (
     <div className="flex flex-col h-full">
+      {/* Header con botón volver */}
+      {showBackButton && (
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-line/40 bg-white lg:hidden">
+          <Link href="/mensajes" className="p-1 -ml-1">
+            <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+            </svg>
+          </Link>
+          <p className="font-semibold text-ink text-sm">Conversación</p>
+        </div>
+      )}
+
       {/* Aviso de seguridad */}
       <div className="px-4 py-2 bg-amber-50 border-b border-amber-100">
         <p className="text-xs text-amber-700 font-medium text-center">
@@ -93,7 +116,7 @@ export function ConversationThread({ contactId }: { contactId: string }) {
           >
             <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${
               msg.isMine
-                ? "bg-coral text-white rounded-br-sm"
+                ? "bg-cta text-text rounded-br-sm"
                 : "bg-white border border-line/60 text-ink rounded-bl-sm"
             }`}>
               {!msg.isMine && (
@@ -140,13 +163,13 @@ export function ConversationThread({ contactId }: { contactId: string }) {
             placeholder="Escribe tu mensaje..."
             rows={1}
             maxLength={1000}
-            className="flex-1 resize-none rounded-2xl border border-line/60 bg-sand px-4 py-3 text-sm text-ink placeholder:text-stone/50 outline-none focus:border-coral/50 max-h-32"
+            className="flex-1 resize-none rounded-2xl border border-line/60 bg-sand px-4 py-3 text-sm text-ink placeholder:text-stone/50 outline-none focus:border-cta/50 max-h-32"
           />
           <button
             type="button"
             onClick={handleSend}
             disabled={isSending || !input.trim()}
-            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-coral text-white shadow-md transition hover:bg-[#e92a5b] disabled:opacity-40"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-cta text-white shadow-md transition hover:bg-cta-dark disabled:opacity-40"
           >
             {isSending ? (
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">

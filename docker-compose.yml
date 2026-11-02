@@ -7,11 +7,9 @@ services:
     environment:
       POSTGRES_DB: terrify_db
       POSTGRES_USER: terrify_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-terrify_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U terrify_user -d terrify_db"]
       interval: 10s
@@ -23,8 +21,6 @@ services:
     image: redis:7-alpine
     container_name: terrify_redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -49,9 +45,38 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     command: >
       sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             gunicorn config.wsgi:application --workers 4 --threads 2 --timeout 30 --bind 0.0.0.0:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+
+  # ─── Celery Worker (tareas asíncronas) ────────────────────────
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: terrify_celery
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "celery -A config worker -l info --concurrency=4"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
 
   # ─── Frontend Next.js ─────────────────────────────────────────
   frontend:

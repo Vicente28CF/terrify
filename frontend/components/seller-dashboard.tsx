@@ -1,16 +1,20 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 import { TerrenoDrawer } from "@/components/terreno-drawer";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   type AuthRequestOptions,
   fetchMyTerrenos,
   fetchReceivedContacts,
   resendContactRequestEmail,
   updateContactRequestStatus,
+  setTerrenoStatus,
+  deleteTerreno,
 } from "@/lib/api";
 import type { ContactRequest, Terreno } from "@/lib/types";
 
@@ -40,6 +44,7 @@ export function SellerDashboard() {
     mode: "create",
     terrenoSlug: null,
   });
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -129,10 +134,41 @@ export function SellerDashboard() {
     }
   }
 
+  async function handleTerrenoStatusChange(slug: string, status: "active" | "sold" | "paused") {
+    if (!auth) return;
+    try {
+      const updated = await setTerrenoStatus(slug, status, auth);
+      setTerrenos((current) =>
+        current.map((t) => (t.slug === updated.slug ? updated : t)),
+      );
+      showToast("success", "Estado actualizado.");
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Error al cambiar estado.");
+    }
+  }
+
+  async function handleTerrenoDelete(slug: string) {
+    if (!auth) return;
+    setConfirmDelete(slug);
+  }
+
+  async function confirmTerrenoDelete() {
+    if (!auth || !confirmDelete) return;
+    try {
+      await deleteTerreno(confirmDelete, auth);
+      setTerrenos((current) => current.filter((t) => t.slug !== confirmDelete));
+      showToast("success", "Terreno eliminado.");
+    } catch (err) {
+      showToast("error", err instanceof Error ? err.message : "Error al eliminar.");
+    } finally {
+      setConfirmDelete(null);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-sand border-t-coral" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-background border-t-cta" />
       </div>
     );
   }
@@ -151,7 +187,7 @@ export function SellerDashboard() {
         <div className="fixed bottom-24 right-6 z-50 flex max-w-sm items-start gap-3 rounded-2xl border bg-white px-4 py-3 shadow-xl">
           <div
             className={`mt-0.5 h-5 w-5 rounded-full ${
-              toast.type === "success" ? "bg-emerald-500" : "bg-red-500"
+              toast.type === "success" ? "bg-success" : "bg-danger"
             }`}
           />
           <p className="text-sm font-medium text-ink">{toast.message}</p>
@@ -172,6 +208,17 @@ export function SellerDashboard() {
         auth={auth}
         onSave={handleSaveTerreno}
         onNotify={showToast}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDelete !== null}
+        title="Eliminar terreno"
+        message="¿Estás seguro de que quieres eliminar este terreno? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => void confirmTerrenoDelete()}
+        onCancel={() => setConfirmDelete(null)}
       />
 
       <header className="flex flex-col gap-4 rounded-3xl border border-white/80 bg-white p-5 shadow-sm sm:flex-row sm:items-start sm:justify-between">
@@ -198,12 +245,12 @@ export function SellerDashboard() {
             <p className="text-xl font-semibold text-ink">{terrenos.length}</p>
           </div>
           <div className="rounded-2xl bg-rose-50 px-4 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-coral/70">Contactos</p>
-            <p className="text-xl font-semibold text-coral">{contacts.length}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-cta/70">Contactos</p>
+            <p className="text-xl font-semibold text-cta">{contacts.length}</p>
           </div>
           <button
             onClick={() => openDrawer("create")}
-            className="flex items-center gap-2 rounded-2xl bg-coral px-5 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(255,56,92,0.3)] transition hover:-translate-y-0.5 hover:bg-[#e92a5b]"
+            className="flex items-center gap-2 rounded-2xl bg-cta px-5 py-2 text-sm font-bold text-text shadow-[0_4px_14px_rgba(209,154,61,0.3)] transition hover:-translate-y-0.5 hover:bg-cta-dark"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -226,7 +273,7 @@ export function SellerDashboard() {
           </p>
           <button
             onClick={() => openDrawer("create")}
-            className="mt-5 rounded-2xl bg-coral px-6 py-3 text-sm font-bold text-white transition hover:bg-[#e92a5b]"
+            className="mt-5 rounded-2xl bg-cta px-6 py-3 text-sm font-bold text-text transition hover:bg-cta-dark"
           >
             Publicar mi primer terreno
           </button>
@@ -238,6 +285,9 @@ export function SellerDashboard() {
               key={terreno.id}
               terreno={terreno}
               onEdit={() => openDrawer("edit", terreno.slug)}
+              auth={auth}
+              onStatusChange={handleTerrenoStatusChange}
+              onDelete={handleTerrenoDelete}
             />
           ))}
         </div>
@@ -310,27 +360,36 @@ export function SellerDashboard() {
 function SellerTerrenoCard({
   terreno,
   onEdit,
+  auth,
+  onStatusChange,
+  onDelete,
 }: {
   terreno: Terreno;
   onEdit: () => void;
+  auth: AuthRequestOptions | null;
+  onStatusChange: (slug: string, status: "active" | "sold" | "paused") => void;
+  onDelete: (slug: string) => void;
 }) {
+  const [showMenu, setShowMenu] = useState(false);
   const coverImage = terreno.image ?? null;
 
   const statusConfig =
     terreno.status === "active"
-      ? { label: "Activo", bg: "bg-emerald-50", text: "text-emerald-700" }
+      ? { label: "Activo", bg: "bg-success/15", text: "text-success" }
       : terreno.status === "paused"
-        ? { label: "Pausado", bg: "bg-amber-50", text: "text-amber-700" }
-        : { label: "Vendido", bg: "bg-stone-100", text: "text-stone-700" };
+        ? { label: "Pausado", bg: "bg-warning/15", text: "text-warning" }
+        : { label: "Vendido", bg: "bg-danger/15", text: "text-danger" };
 
   return (
     <div className="group overflow-hidden rounded-3xl border border-line/60 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md">
       <div className="relative aspect-[4/3] bg-sand">
         {coverImage ? (
-          <img
+          <Image
             src={coverImage}
             alt={terreno.title}
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -342,6 +401,48 @@ function SellerTerrenoCard({
         <span className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusConfig.bg} ${statusConfig.text}`}>
           {statusConfig.label}
         </span>
+        <div className="absolute right-2.5 top-2.5">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 p-1.5 text-stone shadow-sm hover:bg-white"
+          >
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 mt-1 w-36 rounded-xl border border-line/60 bg-white py-1 shadow-lg z-10">
+              <button
+                onClick={() => { onStatusChange(terreno.slug, "active"); setShowMenu(false); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium hover:bg-sand ${terreno.status === "active" ? "text-success" : "text-text-muted"}`}
+              >
+                <span className="h-2 w-2 rounded-full bg-success" /> Activo
+              </button>
+              <button
+                onClick={() => { onStatusChange(terreno.slug, "paused"); setShowMenu(false); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium hover:bg-sand ${terreno.status === "paused" ? "text-warning" : "text-text-muted"}`}
+              >
+                <span className="h-2 w-2 rounded-full bg-warning" /> Pausar
+              </button>
+              <button
+                onClick={() => { onStatusChange(terreno.slug, "sold"); setShowMenu(false); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium hover:bg-sand ${terreno.status === "sold" ? "text-danger" : "text-text-muted"}`}
+              >
+                <span className="h-2 w-2 rounded-full bg-danger" /> Marcar vendido
+              </button>
+              <div className="my-1 border-t border-line/60" />
+              <button
+                onClick={() => { onDelete(terreno.slug); setShowMenu(false); }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-danger hover:bg-danger/10"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Eliminar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="p-4">
@@ -352,7 +453,7 @@ function SellerTerrenoCard({
           <span className="rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-ink">
             {terreno.areaLabel}
           </span>
-          <span className="rounded-full bg-coral/10 px-2.5 py-1 text-xs font-bold text-coral">
+          <span className="rounded-full bg-cta/10 px-2.5 py-1 text-xs font-bold text-cta">
             {terreno.priceLabel}
           </span>
         </div>
@@ -362,13 +463,13 @@ function SellerTerrenoCard({
             href={`/terrenos/${terreno.slug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 rounded-full border border-line/80 bg-sand px-3 py-2 text-center text-xs font-semibold text-ink transition hover:bg-sand/80"
+            className="flex-1 rounded-full border border-primary bg-transparent px-3 py-2 text-center text-xs font-semibold text-primary transition hover:bg-background-alt"
           >
             Ver anuncio
           </a>
           <button
             onClick={onEdit}
-            className="flex-1 rounded-full bg-coral px-3 py-2 text-center text-xs font-bold text-white transition hover:bg-[#e92a5b]"
+            className="flex-1 rounded-full bg-cta px-3 py-2 text-center text-xs font-bold text-text transition hover:bg-cta-dark"
           >
             Editar
           </button>
@@ -393,10 +494,10 @@ function ContactCard({
 }) {
   const statusConfig =
     contact.status === "pending"
-      ? { bg: "bg-amber-100", text: "text-amber-700" }
+      ? { bg: "bg-warning/15", text: "text-warning" }
       : contact.status === "read"
-        ? { bg: "bg-sky-100", text: "text-sky-700" }
-        : { bg: "bg-emerald-100", text: "text-emerald-700" };
+        ? { bg: "bg-primary/15", text: "text-primary" }
+        : { bg: "bg-success/15", text: "text-success" };
 
   const statusLabel =
     contact.status === "pending" ? "Pendiente" : contact.status === "read" ? "Leído" : "Respondido";
@@ -408,7 +509,7 @@ function ContactCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-ink">{contact.buyerName}</p>
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusConfig.bg} ${statusConfig.text}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${contact.status === "pending" ? "bg-amber-500" : contact.status === "read" ? "bg-sky-500" : "bg-emerald-500"}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${contact.status === "pending" ? "bg-warning" : contact.status === "read" ? "bg-primary" : "bg-success"}`} />
               {statusLabel}
             </span>
           </div>
@@ -432,11 +533,11 @@ function ContactCard({
               className={`rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition ${
                 contact.status === statusOption
                   ? statusOption === "pending"
-                    ? "bg-amber-100 text-amber-700"
+                    ? "bg-warning/15 text-warning"
                     : statusOption === "read"
-                      ? "bg-sky-100 text-sky-700"
-                      : "bg-emerald-100 text-emerald-700"
-                  : "text-stone hover:bg-white"
+                      ? "bg-primary/15 text-primary"
+                      : "bg-success/15 text-success"
+                  : "text-text-muted hover:bg-white"
               }`}
             >
               {statusOption === "pending" ? "Pend" : statusOption === "read" ? "Leído" : "Resp."}
@@ -454,7 +555,7 @@ function ContactCard({
         )}
         <a
           href={`/mensajes/${contact.id}`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-coral px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-[#e92a5b]"
+          className="inline-flex items-center gap-1.5 rounded-full bg-cta px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-text transition hover:bg-cta-dark"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>

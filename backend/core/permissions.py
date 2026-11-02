@@ -11,22 +11,3 @@ class IsOwnerOrReadOnly(BasePermission):
         if request.method in SAFE_METHODS:
             return True
         return request.user.is_authenticated and obj.user_id == request.user.id
-
-
-class IsAgentOrAdmin(BasePermission):
-    """Allow access only to agents or platform admins."""
-
-    def has_permission(self, request, view):
-        user = request.user
-        return (
-            user.is_authenticated
-            and (getattr(user, "is_agent", False) or getattr(user, "is_admin_user", False))
-        )
-
-
-class IsAdminUser(BasePermission):
-    """Allow access only to project admins."""
-
-    def has_permission(self, request, view):
-        user = request.user
-        return user.is_authenticated and getattr(user, "is_admin_user", False)

@@ -5,7 +5,7 @@ import { AuthForm } from "@/components/auth-form";
 import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
-  title: "Iniciar sesión | LoteX",
+  title: "Iniciar sesión | Terrify",
 };
 
 export default function LoginPage() {
@@ -20,22 +20,22 @@ export default function LoginPage() {
           <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-ink p-10 lg:p-14">
             
             {/* Decoración de fondo */}
-            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-coral/20 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-coral/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cta/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-cta/10 blur-3xl" />
 
             {/* Logo */}
             <Link href="/" className="relative flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-full bg-coral text-sm font-bold text-white shadow-[0_8px_20px_rgba(255,56,92,0.4)]">
+              <div className="grid h-11 w-11 place-items-center rounded-full bg-cta text-sm font-bold text-white shadow-[0_8px_20px_rgba(209,154,61,0.4)]">
                 LX
               </div>
-              <span className="text-lg font-semibold text-white">LoteX</span>
+              <span className="text-lg font-semibold text-white">Terrify</span>
             </Link>
 
             {/* Mensaje central */}
             <div className="relative space-y-6">
               <h1 className="text-[2.2rem] font-bold leading-[1.1] tracking-[-0.03em] text-white lg:text-[2.8rem]">
                 Tu terreno<br />
-                <span className="text-coral">te está esperando.</span>
+                <span className="text-cta">te está esperando.</span>
               </h1>
               <p className="max-w-xs text-base leading-relaxed text-white/60">
                 Inicia sesión para guardar favoritos, publicar terrenos y contactar vendedores directo.
@@ -49,7 +49,7 @@ export default function LoginPage() {
                   "Contacto directo, sin intermediarios",
                 ].map((point) => (
                   <div key={point} className="flex items-center gap-3">
-                    <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-coral" />
+                    <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-cta" />
                     <p className="text-sm font-medium text-white/70">{point}</p>
                   </div>
                 ))}
@@ -58,7 +58,7 @@ export default function LoginPage() {
 
             {/* Footer izquierdo */}
             <p className="relative text-xs text-white/30">
-              © 2025 LoteX · Jalisco, México
+              © 2026 Terrify · Jalisco, México
             </p>
           </div>
 

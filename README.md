@@ -3,8 +3,8 @@
   <p><strong>Marketplace de terrenos moderno con arquitectura escalable</strong></p>
 
   <p>
-    <img src="https://img.shields.io/badge/Next.js-14-black?style=flat&logo=next.js" alt="Next.js" />
-    <img src="https://img.shields.io/badge/React-18-blue?style=flat&logo=react" alt="React" />
+    <img src="https://img.shields.io/badge/Next.js-16-black?style=flat&logo=next.js" alt="Next.js" />
+    <img src="https://img.shields.io/badge/React-19-blue?style=flat&logo=react" alt="React" />
     <img src="https://img.shields.io/badge/Django-4.2-0C4B33?style=flat&logo=django" alt="Django" />
     <img src="https://img.shields.io/badge/PostgreSQL-16-336791?style=flat&logo=postgresql" alt="PostgreSQL" />
     <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript" alt="TypeScript" />
@@ -63,7 +63,7 @@
 
 ### Frontend
 ```
-Next.js 14 (App Router)  →  React 18  →  TypeScript  →  TailwindCSS
+Next.js 16 (App Router)  →  React 19  →  TypeScript  →  TailwindCSS
 ```
 
 ### Backend
@@ -104,9 +104,9 @@ Vercel (frontend)  →  Render (backend)
 ## 💻 Primeros Pasos
 
 ### Prerrequisitos
-- Node.js v18+
+- Node.js v20+
 - Docker y Docker Compose
-- Python 3.10+ (opcional)
+- Python 3.11+ (opcional, para desarrollo local sin Docker)
 
 ### Instalación
 
@@ -119,6 +119,10 @@ cd terrify
 ### Backend (Docker)
 
 ```bash
+# Copiar variables de entorno
+cp backend/.env.example backend/.env
+# Editar .env con tus valores reales
+
 # Iniciar servicios
 docker compose up -d db redis backend
 
@@ -130,8 +134,8 @@ docker compose exec backend python manage.py check
 
 ```bash
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 **Credenciales**: Copia los archivos `.env.example` a `.env` y configura tus variables.
@@ -150,9 +154,9 @@ npm run dev
 | 4 | ✅ | Gestión de terrenos (CRUD) |
 | 5 | ✅ | Dashboard de leads |
 | 6 | ✅ | Cloudinary + Resend |
-| 7 | 🔄 | Pruebas unitarias |
-| 8 | ⏳ | CI/CD con GitHub Actions |
-| 9 | ⏳ | Deploy multi-entorno |
+| 7 | ✅ | Pruebas unitarias |
+| 8 | ✅ | CI/CD con GitHub Actions |
+| 9 | 🔄 | Deploy multi-entorno |
 
 ---
 

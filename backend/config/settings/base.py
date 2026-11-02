@@ -23,6 +23,7 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "django_filters",
     "csp",
+    "django_celery_beat",
 ]
 
 LOCAL_APPS = [
@@ -35,6 +36,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",    # Archivos estáticos
     "corsheaders.middleware.CorsMiddleware",          # CORS — debe ir arriba
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -74,6 +76,7 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST", default="db"),
         "PORT": config("DB_PORT", default="5432"),
+        "CONN_MAX_AGE": 600,
     }
 }
 
@@ -112,10 +115,14 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
-        "user": "500/hour",
-        "login": "5/minute",       # rate limit específico para login
-        "contact": "10/hour",      # rate limit para formulario de contacto
+        "anon": "50/hour",
+        "user": "200/hour",
+        "login": "5/minute",
+        "register": "3/minute",
+        "contact": "10/hour",
+        "message": "10/minute",
+        "refresh": "10/minute",
+        "terreno_mine": "50/minute",
     },
 }
 
@@ -164,8 +171,12 @@ cloudinary.config(
     secure=True,
 )
 
-LOTEX_MAX_TERRAIN_IMAGES = config("LOTEX_MAX_TERRAIN_IMAGES", default=10, cast=int)
-LOTEX_MAX_IMAGE_FILE_SIZE = config("LOTEX_MAX_IMAGE_FILE_SIZE", default=5 * 1024 * 1024, cast=int)
+TERRIFY_MAX_TERRAIN_IMAGES = config("TERRIFY_MAX_TERRAIN_IMAGES", default=10, cast=int)
+TERRIFY_MAX_IMAGE_FILE_SIZE = config("TERRIFY_MAX_IMAGE_FILE_SIZE", default=5 * 1024 * 1024, cast=int)
+
+# ─── Umbrales "accesible para empezar" ───────────────────────────────────────
+TERRIFY_PRECIO_ACCESIBLE_MAX = config("TERRIFY_PRECIO_ACCESIBLE_MAX", default=450000, cast=int)
+TERRIFY_AREA_ACCESIBLE_MAX = config("TERRIFY_AREA_ACCESIBLE_MAX", default=500, cast=int)
 
 # ─── Email con Resend ─────────────────────────────────────────────────────────
 RESEND_API_KEY = config("RESEND_API_KEY", default="")
@@ -219,9 +230,25 @@ LOGGING = {
 
 # ─── Content Security Policy ─────────────────────────────────────────────────
 CSP_DEFAULT_SRC = ("'self'",)
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
-CSP_SCRIPT_SRC = ("'self'", "https://accounts.google.com")
-CSP_CONNECT_SRC = ("'self'", "https://accounts.google.com", "https://oauth2.googleapis.com")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com")
+CSP_SCRIPT_SRC = ("'self'", "https://accounts.google.com", "https://apis.google.com")
+CSP_CONNECT_SRC = ("'self'", "https://accounts.google.com", "https://oauth2.googleapis.com", "https://www.googleapis.com")
 CSP_FRAME_SRC = ("'self'", "https://accounts.google.com")
 CSP_IMG_SRC = ("'self'", "data:", "res.cloudinary.com")
-CSP_FONT_SRC = ("'self'",)
+CSP_FONT_SRC = ("'self'", "https://fonts.gstatic.com")
+
+# ─── Celery (tareas asíncronas) ──────────────────────────────────────────────
+CELERY_BROKER_URL = config("REDIS_URL", default="redis://redis:6379/0")
+CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 300  # 5 minutos max por tarea
+CELERY_BEAT_SCHEDULE = {
+    "flush-views-count-every-5-min": {
+        "task": "apps.terrenos.tasks.flush_views_count",
+        "schedule": 300.0,  # cada 5 minutos
+    },
+}

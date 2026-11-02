@@ -9,22 +9,23 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.throttling import LoginRateThrottle
+from core.throttling import LoginRateThrottle, RegisterRateThrottle, RefreshRateThrottle
 
 from .email_service import send_verification_email, send_welcome_email
 from .models import User
 from .serializers import LoginSerializer, RegisterSerializer, UserSerializer, UserUpdateSerializer
+from .tasks import send_verification_email_task, send_welcome_email_task
 
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
-    throttle_classes = [LoginRateThrottle]
+    throttle_classes = [RegisterRateThrottle]
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        send_verification_email(user)
+        send_verification_email_task.delay(user.pk)
         return Response(
             {
                 "message": "Cuenta creada. Revisa tu email para verificarla.",
@@ -57,6 +58,7 @@ class LoginView(APIView):
 class RefreshView(TokenRefreshView):
     permission_classes = [permissions.AllowAny]
     serializer_class = TokenRefreshSerializer
+    throttle_classes = [RefreshRateThrottle]
 
 
 class LogoutView(APIView):
@@ -112,7 +114,7 @@ class VerifyEmailView(APIView):
         user.email_verification_token = None
         user.save(update_fields=["email_verified", "is_verified", "email_verification_token"])
 
-        send_welcome_email(user)
+        send_welcome_email_task.delay(user.pk)
 
         return Response({"detail": "Cuenta verificada correctamente."})
 
@@ -145,7 +147,7 @@ class ResendVerificationView(APIView):
                     status=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
 
-        send_verification_email(user)
+        send_verification_email_task.delay(user.pk)
         return Response({"detail": "Si el email existe, recibiras un enlace."})
 
 

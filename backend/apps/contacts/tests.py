@@ -74,7 +74,7 @@ class ContactRequestApiTests(APITestCase):
     def test_authenticated_buyer_can_create_contact(self):
         self.client.force_authenticate(self.buyer)
 
-        with patch("apps.contacts.views.send_contact_request_notification") as notify_mock:
+        with patch("apps.contacts.views.send_contact_notification_task") as notify_mock:
             response = self.client.post(
                 reverse("contact-requests-list"),
                 {
@@ -86,14 +86,13 @@ class ContactRequestApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(ContactRequest.objects.filter(terreno=self.terreno).count(), 2)
-        notify_mock.assert_called_once()
+        notify_mock.delay.assert_called_once()
 
     def test_contact_creation_survives_notification_failure(self):
         self.client.force_authenticate(self.buyer)
 
         with patch(
-            "apps.contacts.views.send_contact_request_notification",
-            side_effect=ContactNotificationServiceError("Resend error: resend failure"),
+            "apps.contacts.views.send_contact_notification_task",
         ):
             response = self.client.post(
                 reverse("contact-requests-list"),
@@ -195,9 +194,8 @@ class ContactRequestApiTests(APITestCase):
         self.assertEqual(contact_request.notification_status, ContactRequest.NotificationStatus.FAILED)
         self.assertEqual(contact_request.notification_error, "El vendedor no tiene email disponible.")
 
-    @patch("apps.contacts.services.resend.Emails.send", side_effect=Exception("boom"))
-    @override_settings(RESEND_API_KEY="re_test_key")
-    def test_resend_email_endpoint_returns_updated_failed_notification_state(self, send_mock):
+    @patch("apps.contacts.views.send_contact_notification_task")
+    def test_resend_email_endpoint_triggers_notification_task(self, task_mock):
         self.client.force_authenticate(self.seller)
 
         response = self.client.post(
@@ -206,11 +204,8 @@ class ContactRequestApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.contact_request.refresh_from_db()
         self.assertEqual(response.data["id"], str(self.contact_request.id))
-        self.assertEqual(self.contact_request.notification_status, ContactRequest.NotificationStatus.FAILED)
-        self.assertIn("Resend error:", self.contact_request.notification_error)
-        send_mock.assert_called_once()
+        task_mock.delay.assert_called_once_with(str(self.contact_request.id))
 
     def test_user_cannot_contact_own_terreno(self):
         self.client.force_authenticate(self.seller)

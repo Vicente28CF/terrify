@@ -8,6 +8,7 @@ export type TerrenoImage = {
 export type TerrenoOwner = {
   fullName: string;
   isVerified: boolean;
+  email?: string;
 };
 
 export type Terreno = {
@@ -22,6 +23,7 @@ export type Terreno = {
   areaLabel: string;
   price: number;
   priceLabel: string;
+  pricePerM2: number | null;
   status: "active" | "paused" | "sold";
   isFeatured: boolean;
   image: string | null;
@@ -36,6 +38,17 @@ export type Terreno = {
   isFavorited?: boolean;
   nearbyServices?: string[];
   terrainType?: string;
+  areaUnit?: "m2" | "hectare";
+  landUse?: string;
+  propertyType?: string;
+  hasWater?: boolean;
+  hasElectricity?: boolean;
+  hasDrainage?: boolean;
+  hasPavedRoad?: boolean;
+  acceptsFinancing?: boolean;
+  downPaymentAmount?: number | null;
+  paymentFacilityLabel?: string | null;
+  esAccesibleParaEmpezar?: boolean;
 };
 
 export type AuthUser = {
@@ -111,6 +124,15 @@ export type CreateTerrenoPayload = {
   status: "active" | "paused" | "sold";
   nearbyServices?: string[];
   terrainType?: string;
+  areaUnit?: "m2" | "hectare";
+  landUse?: string;
+  propertyType?: string;
+  hasWater?: boolean;
+  hasElectricity?: boolean;
+  hasDrainage?: boolean;
+  hasPavedRoad?: boolean;
+  acceptsFinancing?: boolean;
+  downPaymentAmount?: number | null;
 };
 
 export type UpdateTerrenoPayload = CreateTerrenoPayload;
